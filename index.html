@@ -13,7 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
 <style>
-/* ── 디자인 스타일 ─────────────────────────────────── */
+/* 🎨 디자인 복구용 CSS (image_98edeb.png 스타일) */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --bg-primary: #ffffff; --bg-secondary: #f5f5f3; --bg-tertiary: #eeece6; --bg-info: #e6f1fb;
@@ -34,28 +34,27 @@ body { font-family: var(--font); background: var(--bg-tertiary); color: var(--te
 /* 🔒 로그인 화면 */
 #login-screen { position: fixed; inset: 0; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; z-index: 3000; }
 .login-card { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 2.5rem 2rem; text-align: center; width: 90%; max-width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-.login-card h1 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-.login-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; }
-.google-btn { width: 100%; padding: 12px; border: 0.5px solid var(--border-hover); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+.google-btn { width: 100%; padding: 12px; border: 0.5px solid var(--border-hover); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.15s; }
 .google-btn:hover { background: var(--bg-secondary); }
 
-/* 📱 메인 레이아웃 */
+/* 📱 메인 대시보드 레이아웃 (Rich UI) */
 #main-app { display: none; }
 #main-app.show { display: block; }
 .app { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
+
 .header { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .header-left h1 { font-size: 17px; font-weight: 600; }
 .header-left p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
-/* 탭 바 */
 .tab-bar { display: flex; padding: 0 1.5rem; border-bottom: 0.5px solid var(--border); overflow-x: auto; background: var(--bg-primary); }
 .tab { padding: 14px 16px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-secondary); white-space: nowrap; transition: 0.2s; }
 .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 600; }
+
 .content { padding: 1.5rem; display: none; }
 .content.active { display: block; }
 
-/* 통계 메트릭 */
+/* 📊 통계 및 카드 디자인 */
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
 @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
 .metric { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 1.2rem 1rem; }
@@ -69,45 +68,37 @@ body { font-family: var(--font); background: var(--bg-tertiary); color: var(--te
 .card-pad { padding: 1.25rem; }
 .section-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
 
-/* 테이블 */
+/* 📋 테이블 및 아바타 바 */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { padding: 10px 12px; text-align: left; font-size: 11px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border); background: var(--bg-secondary); white-space: nowrap; }
-td { padding: 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
-
-/* 버튼 및 배지 */
-.btn { padding: 8px 16px; border: 0.5px solid var(--border-hover); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; font-size: 12px; font-family: inherit; transition: 0.15s; }
-.btn:hover { background: var(--bg-secondary); }
-.btn-primary { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
-.btn-sm { padding: 4px 10px; font-size: 11px; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.b-wait { background: #FAEEDA; color: #633806; }
-.b-quoted { background: #E6F1FB; color: #0C447C; }
-.b-won { background: #EAF3DE; color: #27500A; }
-.b-lost { background: #FCEBEB; color: #791F1F; }
-
-/* 알림 및 아바타 */
-.dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
-.notif-item { padding: 12px 16px; border-bottom: 0.5px solid var(--border); font-size: 13px; }
-.notif-item.unread { background: var(--bg-info); }
-.notif-time { font-size: 11px; color: var(--text-tertiary); margin-top: 5px; }
+th { padding: 10px 12px; text-align: left; font-size: 11px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border); background: var(--bg-secondary); }
+td { padding: 12px; border-bottom: 0.5px solid var(--border); }
 
 .rep-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
-.avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #CECBF6; color: #3C3489; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.av-b { background: #B5D4F4; color: #0C447C; } .av-t { background: #9FE1CB; color: #085041; }
+.av-c { background: #F5C4B3; color: #712B13; } .av-p { background: #CECBF6; color: #3C3489; }
 .prog { flex: 1; height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; margin-top: 5px; }
 .prog-fill { height: 100%; background: #639922; }
 
-/* 모달 */
+/* 🔔 알림 및 배지 */
+.dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.notif-item { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.notif-item.unread { background: var(--bg-info); }
+.noti-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 10px; font-size: 10px; background: #FAECE7; color: #712B13; }
+
+.btn { padding: 7px 14px; border: 0.5px solid var(--border-hover); border-radius: var(--radius-md); background: var(--bg-primary); cursor: pointer; font-size: 12px; font-family: inherit; }
+.btn-primary { background: var(--text-primary); color: var(--bg-primary); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.b-wait { background: #FAEEDA; color: #633806; } .b-won { background: #EAF3DE; color: #27500A; }
+
+/* 🪟 모달 */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 4000; display: none; align-items: center; justify-content: center; padding: 1rem; }
 .overlay.open { display: flex; }
-.modal { background: var(--bg-primary); border-radius: var(--radius-lg); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-.modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.modal-body { padding: 1.5rem; }
-.fg { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+.fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
 .fg label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
-.fg input, .fg select, .fg textarea { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 10px; font-size: 13px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
-.status-banner { background: var(--bg-info); border: 0.5px solid #b5d4f4; border-radius: var(--radius-md); padding: 10px; font-size: 12px; color: var(--text-info); margin-top: 12px; display: none; align-items: center; gap: 8px; }
-.status-banner.show { display: flex; }
+.fg input, .fg select, .fg textarea { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 10px; font-size: 13px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -125,7 +116,6 @@ td { padding: 12px; border-bottom: 0.5px solid var(--border); vertical-align: mi
 
 <div id="main-app" class="app">
   <div class="shell">
-    
     <div class="header">
       <div class="header-left">
         <h1>견적 수주율 관리 대시보드</h1>
@@ -164,21 +154,16 @@ td { padding: 12px; border-bottom: 0.5px solid var(--border); vertical-align: mi
     </div>
 
     <div id="tab-inquiries" class="content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div style="display:flex; gap:8px;">
           <select id="f-rep" onchange="renderTable()" class="btn"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
           <select id="f-status" onchange="renderTable()" class="btn"><option value="">전체 상태</option><option>대기중</option><option>견적완료</option><option>수주</option><option>미수주</option></select>
         </div>
-        <div style="display:flex; gap:12px; align-items:center;">
-          <span id="table-count" style="font-size:12px; color:var(--text-secondary);"></span>
-          <button class="btn" style="color:#1D9E75; border-color:#1D9E75;" onclick="exportExcel()">Excel 다운로드</button>
-        </div>
+        <button class="btn" style="color:#1D9E75; border-color:#1D9E75;" onclick="exportExcel()">Excel 다운로드</button>
       </div>
       <div class="card table-wrap">
         <table>
-          <thead><tr>
-            <th>날짜</th><th>담당자</th><th>고객사</th><th>Cat No.</th><th>제품명</th><th>CAS No.</th><th>Package</th><th>수량</th><th>금액</th><th>상태</th><th>관리</th>
-          </tr></thead>
+          <thead><tr><th>날짜</th><th>담당자</th><th>고객사</th><th>Cat No.</th><th>제품명</th><th>CAS No.</th><th>Package</th><th>수량</th><th>금액</th><th>상태</th><th>관리</th></tr></thead>
           <tbody id="inq-tbody"></tbody>
         </table>
       </div>
@@ -191,29 +176,30 @@ td { padding: 12px; border-bottom: 0.5px solid var(--border); vertical-align: mi
 
     <div id="tab-analytics" class="content">
       <div class="two-col">
-        <div class="card card-pad"><div class="section-title">담당자별 수주 건수</div><div style="height:240px;"><canvas id="rep-chart"></canvas></div></div>
-        <div class="card card-pad"><div class="section-title">전체 결과 현황</div><div style="height:240px;"><canvas id="result-chart"></canvas></div></div>
+        <div class="card card-pad"><div class="section-title">담당자별 수주 건수</div><div style="height:220px;"><canvas id="rep-chart"></canvas></div></div>
+        <div class="card card-pad"><div class="section-title">전체 결과 현황</div><div style="height:220px;"><canvas id="result-chart"></canvas></div></div>
       </div>
     </div>
-
   </div>
 </div>
 
 <div class="overlay" id="inq-modal">
   <div class="modal">
-    <div class="modal-head"><h2>신규 견적 문의 등록</h2><button class="btn" style="border:none;font-size:20px;" onclick="closeModal('inq-modal')">×</button></div>
-    <div class="modal-body">
+    <div class="modal-head" style="padding:1.2rem 1.5rem; border-bottom:0.5px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="font-size:16px;">신규 견적 문의 등록</h2>
+      <button class="btn" style="border:none;font-size:20px;" onclick="closeModal('inq-modal')">×</button>
+    </div>
+    <div class="modal-body" style="padding:1.5rem;">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
         <div class="fg"><label>영업담당자</label><select id="i-rep"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
         <div class="fg"><label>고객사</label><input id="i-customer" type="text" placeholder="고객사명"></div>
-        <div class="fg"><label>Cat No.</label><input id="i-partno" type="text" placeholder="예: G7513"></div>
+        <div class="fg"><label>Cat No.</label><input id="i-partno" type="text" placeholder="제품번호"></div>
         <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명"></div>
         <div class="fg"><label>CAS No.</label><input id="i-casno" type="text" placeholder="예: 67-68-5"></div>
-        <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="예: 500mL"></div>
+        <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="용량"></div>
         <div class="fg"><label>수량</label><input id="i-qty" type="text" placeholder="수량"></div>
       </div>
-      <div class="fg"><label>메모 (구매팀 전달사항)</label><textarea id="i-memo" rows="3" placeholder="상세 요청사항을 적어주세요."></textarea></div>
-      <div id="inq-status" class="status-banner">알림 전송 중...</div>
+      <div class="fg"><label>메모 (요청사항)</label><textarea id="i-memo" rows="3" placeholder="추가 사항 입력"></textarea></div>
     </div>
     <div class="modal-foot" style="padding:1rem 1.5rem; border-top:0.5px solid var(--border); display:flex; gap:10px; justify-content:flex-end;">
       <button class="btn" onclick="closeModal('inq-modal')">취소</button>
@@ -222,43 +208,8 @@ td { padding: 12px; border-bottom: 0.5px solid var(--border); vertical-align: mi
   </div>
 </div>
 
-<div class="overlay" id="quote-modal">
-  <div class="modal">
-    <div class="modal-head"><h2>견적 정보 업데이트</h2><button class="btn" style="border:none;font-size:20px;" onclick="closeModal('quote-modal')">×</button></div>
-    <div class="modal-body">
-      <div id="quote-info" style="margin-bottom:15px; font-size:12px; color:var(--text-secondary); background:var(--bg-secondary); padding:12px; border-radius:8px; line-height:1.4;"></div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-        <div class="fg"><label>견적 금액 (원)</label><input id="q-price" type="number"></div>
-        <div class="fg"><label>납기 가능일</label><input id="q-delivery" type="date"></div>
-      </div>
-      <div class="fg"><label>공급사 정보</label><input id="q-supplier" type="text"></div>
-      <div class="fg"><label>구매팀 메모</label><textarea id="q-memo" rows="3"></textarea></div>
-      <div id="quote-status" class="status-banner">데이터 저장 중...</div>
-    </div>
-    <div class="modal-foot" style="padding:1rem 1.5rem; border-top:0.5px solid var(--border); display:flex; gap:10px; justify-content:flex-end;">
-      <button class="btn" onclick="closeModal('quote-modal')">취소</button>
-      <button class="btn btn-primary" onclick="submitQuote()">저장 및 영업팀 알림</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="result-modal">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-head"><h2>수주 결과 확정</h2><button class="btn" style="border:none;font-size:20px;" onclick="closeModal('result-modal')">×</button></div>
-    <div class="modal-body">
-      <div id="result-info" style="margin-bottom:15px; font-size:13px; font-weight:600;"></div>
-      <div class="fg"><label>최종 결과</label><select id="r-result"><option value="수주">수주 (Success)</option><option value="미수주">미수주 (Lost)</option></select></div>
-      <div class="fg"><label>결과 사유 (메모)</label><textarea id="r-memo" rows="2"></textarea></div>
-    </div>
-    <div class="modal-foot" style="padding:1rem 1.5rem; border-top:0.5px solid var(--border); display:flex; gap:10px; justify-content:flex-end;">
-      <button class="btn" onclick="closeModal('result-modal')">취소</button>
-      <button class="btn btn-primary" onclick="submitResult()">저장하기</button>
-    </div>
-  </div>
-</div>
-
 <script>
-// ── 파이어베이스 초기화 ──────────────────────────────────
+// ── Firebase 설정 ──────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDXolC9bL4pdBAcLTHC2tsEAmKkCilYAVw",
   authDomain: "avention-quote.firebaseapp.com",
@@ -267,21 +218,14 @@ const firebaseConfig = {
   messagingSenderId: "963602798000",
   appId: "1:963602798000:web:b9f126a5c44270c4c0b275"
 };
-
-const CONFIG = {
-  discordBuyer: 'https://discord.com/api/webhooks/1490536970223353947/fzC0wssKrg5FDqkURsh-PUpK7xfJzWNAcDyiFSxsczbQSYCLJGhSewbjeMf0lofc3iLc',
-  discordRep:   'https://discord.com/api/webhooks/1490537189795303435/IZH8O3AXoP9vSE3EJc6sNJmM-MMWVjcUL32ufess1JfoX2w1JW9zrN8dv71TWsL-drQa',
-  sheetsUrl:    'https://script.google.com/macros/s/AKfycbzUX87JH06siBmOZ4ajXAxPh7y9DnPd23AN5CMaQe7if6kZywQy4p7OlINSoaihBr-Y/exec'
-};
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-let inquiries = [], notifs = [], quoteTarget = null, resultTarget = null;
-const charts = {};
+let inquiries = [], notifs = [];
 const REPS = ['BML', 'LSB', 'POL', 'YSJ'];
-const AV_COLORS = ['#B5D4F4', '#9FE1CB', '#F5C4B3', '#CECBF6'];
+const AV_CLASSES = ['av-b', 'av-t', 'av-c', 'av-p'];
+const charts = {};
 
 // 🔒 보안 인증 체크
 auth.onAuthStateChanged(user => {
@@ -289,10 +233,10 @@ auth.onAuthStateChanged(user => {
     if (user.email.endsWith('@avention.co.kr') || user.email === 'ink@avention.co.kr') {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('main-app').classList.add('show');
-      document.getElementById('user-info').textContent = `${user.displayName || user.email} 접속 중`;
-      startSync(); // 🎆 실시간 데이터 동기화 시작
+      document.getElementById('user-info').textContent = `${user.displayName || user.email}님 접속 중`;
+      startSync(); // 🎆 실시간 동기화 시작
     } else {
-      alert('어벤션 계정만 접속 가능합니다.'); auth.signOut();
+      alert('어벤션 계정(@avention.co.kr)으로 로그인해주세요.'); auth.signOut();
     }
   } else {
     document.getElementById('login-screen').style.display = 'flex';
@@ -303,7 +247,7 @@ auth.onAuthStateChanged(user => {
 function loginWithGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 function logout() { if(confirm('로그아웃 하시겠습니까?')) auth.signOut(); }
 
-// 🎆 파이어베이스 실시간 연동
+// 🎆 파이어베이스 실시간 동기화
 function startSync() {
   db.collection("inquiries").orderBy("id", "desc").onSnapshot(snap => {
     inquiries = snap.docs.map(doc => doc.data());
@@ -316,86 +260,34 @@ function startSync() {
   });
 }
 
-// ── 데이터 처리 로직 ──
-async function submitInquiry() {
-  const rep = document.getElementById('i-rep').value;
-  const customer = document.getElementById('i-customer').value.trim();
-  const product = document.getElementById('i-product').value.trim();
-  if(!customer || !product) return alert("필수 정보를 입력하세요.");
-
-  const inq = {
-    id: Date.now(), date: new Date().toISOString().slice(0,10),
-    rep, customer, product,
-    partNo: document.getElementById('i-partno').value.trim(),
-    casNo: document.getElementById('i-casno').value.trim(),
-    pkg: document.getElementById('i-pkg').value.trim(),
-    qty: document.getElementById('i-qty').value.trim(),
-    memo: document.getElementById('i-memo').value.trim(),
-    status: '대기중', price: null
-  };
-
-  await db.collection("inquiries").doc(String(inq.id)).set(inq);
-  await db.collection("notifs").add({ id: Date.now(), text: `${rep} → 구매: ${customer} 견적 요청`, time: nowStr(), unread: true });
-  closeModal('inq-modal');
-}
-
-async function submitQuote() {
-  const i = inquiries.find(x => x.id === quoteTarget);
-  const updates = {
-    price: parseInt(document.getElementById('q-price').value) || null,
-    delivery: document.getElementById('q-delivery').value,
-    supplier: document.getElementById('q-supplier').value,
-    memo: document.getElementById('q-memo').value,
-    status: '견적완료',
-    quoteDate: new Date().toISOString().slice(0,10)
-  };
-  await db.collection("inquiries").doc(String(quoteTarget)).update(updates);
-  await db.collection("notifs").add({ id: Date.now(), text: `구매 → ${i.rep}: ${i.customer} 견적 완료`, time: nowStr(), unread: true });
-  closeModal('quote-modal');
-}
-
-async function submitResult() {
-  const i = inquiries.find(x => x.id === resultTarget);
-  const newStatus = document.getElementById('r-result').value;
-  await db.collection("inquiries").doc(String(resultTarget)).update({
-    status: newStatus,
-    resultMemo: document.getElementById('r-memo').value
-  });
-  await db.collection("notifs").add({ id: Date.now(), text: `수주결과 → ${i.rep}: ${i.customer} [${newStatus}]`, time: nowStr(), unread: true });
-  closeModal('result-modal');
-}
-
-// ── 렌더링 로직 (디자인 계승) ──
+// ── 렌더링 로직 (image_98edeb.png 스타일 복구)
 function renderAll() {
   renderMetrics(); renderRepStats(); renderRecent(); renderTable();
   if(document.getElementById('tab-dashboard').classList.contains('active')) setTimeout(renderTrend, 100);
 }
 
 function renderMetrics() {
-  const total = inquiries.length;
   const won = inquiries.filter(i => i.status === '수주').length;
   const pending = inquiries.filter(i => i.status === '대기중').length;
-  const decided = won + inquiries.filter(i => i.status === '미수주').length;
-  const rate = decided > 0 ? Math.round(won/decided*100) : 0;
   const totalAmt = inquiries.filter(i=>i.status==='수주').reduce((s,i)=>s+(i.price||0), 0);
+  const rate = inquiries.length > 0 ? Math.round(won / (won + inquiries.filter(i=>i.status==='미수주').length) * 100) || 0 : 0;
 
   document.getElementById('metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">전체 문의</div><div class="metric-value">${total}건</div></div>
+    <div class="metric"><div class="metric-label">전체 문의</div><div class="metric-value">${inquiries.length}건</div></div>
     <div class="metric"><div class="metric-label">수주율</div><div class="metric-value green">${rate}%</div></div>
     <div class="metric"><div class="metric-label">처리 대기</div><div class="metric-value amber">${pending}건</div></div>
-    <div class="metric"><div class="metric-label">수주 총액</div><div class="metric-value">${(totalAmt/1000000).toFixed(1)}M</div></div>
-  `;
+    <div class="metric"><div class="metric-label">수주 총액</div><div class="metric-value">${(totalAmt/1000000).toFixed(1)}M</div></div>`;
 }
 
 function renderRepStats() {
-  document.getElementById('rep-stats').innerHTML = REPS.map((rep, idx) => {
-    const mine = inquiries.filter(i => i.rep === rep);
-    const won = mine.filter(i => i.status === '수주').length;
-    const decided = won + mine.filter(i => i.status === '미수주').length;
-    const rate = decided > 0 ? Math.round(won/decided*100) : 0;
+  document.getElementById('rep-stats').innerHTML = REPS.map((rep, i) => {
+    const mine = inquiries.filter(x=>x.rep===rep);
+    const won = mine.filter(x=>x.status==='수주').length;
+    const decided = won + mine.filter(x=>x.status==='미수주').length;
+    const rate = decided>0?Math.round(won/decided*100):0;
     return `
       <div class="rep-row">
-        <div class="avatar" style="background:${AV_COLORS[idx]}">${rep[0]}</div>
+        <div class="avatar ${AV_CLASSES[i]}">${rep[0]}</div>
         <div style="flex:1;">
           <div style="display:flex; justify-content:space-between; font-size:12px;"><span><strong>${rep}</strong></span><span>${rate}%</span></div>
           <div class="prog"><div class="prog-fill" style="width:${rate}%"></div></div>
@@ -406,7 +298,7 @@ function renderRepStats() {
 
 function renderRecent() {
   document.getElementById('recent-list').innerHTML = inquiries.slice(0, 6).map(i => `
-    <div class="recent-item">
+    <div class="notif-item">
       <span class="badge ${i.status==='대기중'?'b-wait':i.status==='수주'?'b-won':'b-quoted'}">${i.status}</span>
       <span style="font-size:12px; margin-left:8px; flex:1;"><strong>${i.customer}</strong> - ${i.product}</span>
     </div>`).join('');
@@ -416,93 +308,60 @@ function renderTable() {
   const r = document.getElementById('f-rep').value;
   const s = document.getElementById('f-status').value;
   const filtered = inquiries.filter(i => (!r || i.rep === r) && (!s || i.status === s));
-  
-  document.getElementById('table-count').textContent = `총 ${filtered.length}건`;
   document.getElementById('inq-tbody').innerHTML = filtered.map(i => `
     <tr>
       <td style="font-size:11px;color:#888;">${i.date}</td>
-      <td>${i.rep}</td>
-      <td><strong>${i.customer}</strong></td>
-      <td style="font-size:11px;">${i.partNo||'-'}</td>
-      <td style="font-size:12px;">${i.product}</td>
-      <td style="font-size:11px;">${i.casNo||'-'}</td>
-      <td style="font-size:11px;">${i.pkg||'-'}</td>
-      <td style="font-size:11px;">${i.qty||'-'}</td>
+      <td>${i.rep}</td><td><strong>${i.customer}</strong></td><td>${i.partNo||'-'}</td>
+      <td>${i.product}</td><td>${i.casNo||'-'}</td><td>${i.pkg||'-'}</td><td>${i.qty||'-'}</td>
       <td>${i.price ? '₩'+(i.price/10000).toFixed(0)+'만' : '-'}</td>
       <td><span class="badge ${i.status==='대기중'?'b-wait':i.status==='수주'?'b-won':'b-quoted'}">${i.status}</span></td>
-      <td>
-        <button class="btn btn-sm" onclick="openQuoteModal(${i.id})">수정</button>
-      </td>
+      <td><button class="btn btn-sm" onclick="openQuoteModal(${i.id})">수정</button></td>
     </tr>`).join('');
 }
 
-// 🛡️ [소유님 요청] 관리자 전용 알림 삭제 로직
+// 🛡️ 관리자(ink@) 전용 알림 삭제
 function renderNotifs() {
   const el = document.getElementById('notif-list');
-  if (!notifs.length) { el.innerHTML = '<div class="empty">알림 없음</div>'; return; }
-
   const isMaster = auth.currentUser && auth.currentUser.email === 'ink@avention.co.kr';
-
   el.innerHTML = notifs.map(n => `
-    <div class="notif-item ${n.unread?'unread':''}" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="notif-item" style="display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <div class="notif-text">${n.unread?'<span class="dot"></span>':''}<span>${n.text}</span></div>
+        <div class="notif-text">${n.unread?'<span class="dot"></span>':''}<span>${n.text}</span><span class="noti-badge">알림</span></div>
         <div class="notif-time">${n.time}</div>
       </div>
-      ${isMaster ? `<button class="btn btn-sm" style="color:red; border:none;" onclick="deleteNotif('${n.docId}')">삭제</button>` : ''}
+      ${isMaster ? `<button class="btn btn-sm" style="color:#E24B4A; border:1px solid #F09595;" onclick="deleteNotif('${n.docId}')">삭제</button>` : ''}
     </div>`).join('');
 }
 
-async function deleteNotif(docId) {
-  if(confirm("알림을 삭제할까요?")) await db.collection("notifs").doc(docId).delete();
-}
+async function deleteNotif(id) { if(confirm("삭제할까요?")) await db.collection("notifs").doc(id).delete(); }
 
-// ── 유틸리티 ──
+// ── 유틸리티 및 차트 ──
 function switchTab(name, el) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
-  if(name==='analytics') setTimeout(renderAnalytics, 100);
+  el.classList.add('active'); document.getElementById('tab-'+name).classList.add('active');
+  if(name==='dashboard') setTimeout(renderTrend, 100);
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function openQuoteModal(id) { 
-  quoteTarget=id; 
-  const i=inquiries.find(x=>x.id===id);
-  document.getElementById('quote-info').textContent = `${i.rep} · ${i.customer} · ${i.product} · ${i.memo || ''}`;
-  openModal('quote-modal'); 
-}
-
-// 🛡️ [소유님 요청] 시간/분 표시 로직 수정
-function nowStr() {
-  return new Date().toLocaleString('ko-KR', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: true
-  }).replace(/\. /g, '-').replace('.', '');
-}
-
-function updateBadges() {
-  const pending = inquiries.filter(i=>i.status==='대기중').length;
-  document.getElementById('pending-dot').innerHTML = pending > 0 ? '<span class="dot"></span>' : '';
-  const pn = document.getElementById('pending-notif');
-  if(pending>0){pn.style.display='inline-block';pn.textContent=`미처리 ${pending}건`;} else pn.style.display='none';
-}
-
 function renderTrend() {
   if(charts.trend) charts.trend.destroy();
-  const ctx = document.getElementById('trend-chart');
-  charts.trend = new Chart(ctx, {
+  charts.trend = new Chart(document.getElementById('trend-chart'), {
     type:'line', data:{ labels:['1월','2월','3월','4월'], datasets:[{ label:'수주율', data:[45,52,48,60], borderColor:'#1D9E75', fill:true, backgroundColor:'rgba(29,158,117,0.05)', tension:0.4 }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
   });
 }
 
-function renderAnalytics() {
-  ['rep-chart','result-chart'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
-  charts['rep-chart'] = new Chart(document.getElementById('rep-chart'), { type:'doughnut', data:{ labels:REPS, datasets:[{ data:[10,15,8,5], backgroundColor:AV_COLORS }] }, options:{responsive:true, maintainAspectRatio:false} });
+function nowStr() { return new Date().toLocaleString('ko-KR', { hour12:true, month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }).replace('.','-').replace('.','-'); }
+
+function updateBadges() {
+  const pending = inquiries.filter(i=>i.status==='대기중').length;
+  document.getElementById('pending-dot').innerHTML = pending > 0 ? '<span class="dot"></span>' : '';
+  const pn = document.getElementById('pending-notif');
+  if(pending > 0) { pn.style.display = 'inline-block'; pn.textContent = `미처리 ${pending}건`; }
+  else pn.style.display = 'none';
 }
 
 function exportExcel() {
