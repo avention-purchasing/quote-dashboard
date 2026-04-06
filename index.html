@@ -655,7 +655,15 @@ function closeModal(id){
   document.getElementById(id).classList.remove('open');
   ['inq-status','quote-status'].forEach(sid=>{const el=document.getElementById(sid);if(el)el.classList.remove('show');});
 }
-function nowStr(){return new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(/\. /g,'-').replace('.',':').slice(0,-3);}
+function nowStr() {
+  return new Date().toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).replace(/\. /g, '-').replace('.', '');
+}
 </script>
 </body>
 </html>
