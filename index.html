@@ -102,7 +102,6 @@
   .btn-primary { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
   .btn-primary:hover { opacity: 0.85; }
   .btn-sm { padding: 4px 10px; font-size: 11px; }
-  .btn-row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
   /* Notification dot */
   .dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; margin-left: 5px; vertical-align: middle; }
@@ -122,11 +121,7 @@
   .form-full { grid-column: 1 / -1; }
   .fg { display: flex; flex-direction: column; gap: 5px; }
   .fg label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
-  .fg input, .fg select, .fg textarea {
-    border: 0.5px solid var(--border); border-radius: var(--radius-md);
-    padding: 8px 10px; font-size: 13px; font-family: var(--font);
-    background: var(--bg-primary); color: var(--text-primary);
-  }
+  .fg input, .fg select, .fg textarea { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 8px 10px; font-size: 13px; font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); }
   .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--border-hover); }
   .fg textarea { resize: vertical; min-height: 65px; }
 
@@ -223,9 +218,7 @@
         <select id="f-rep" onchange="renderTable()"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
         <select id="f-status" onchange="renderTable()"><option value="">전체 상태</option><option>대기중</option><option>견적완료</option><option>수주</option><option>미수주</option></select>
         <span style="flex:1;"></span>
-        
         <button class="btn btn-sm" style="border-color: #1D9E75; color: #1D9E75; font-weight: 500;" onclick="exportExcel()">엑셀 다운로드</button>
-        
         <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
       </div>
       <div class="card table-wrap">
@@ -331,7 +324,7 @@
 </div>
 
 <script>
-// ── 설정 (이메일 및 웹훅) ──────────────────────────────
+// ── 설정 (이메일 주소 및 웹훅) ──────────────────────────────
 const CONFIG = {
   buyerEmail: 'ink@avention.co.kr',
   repEmails: { 'BML': 'avention@avention.co.kr', 'LSB': 'seungbin@avention.co.kr', 'POL': 'seungbin@avention.co.kr', 'YSJ': 'bio@avention.co.kr' },
@@ -358,7 +351,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ── 전역 변수 (초기화) ────────────────────────────────────────
+// ── 전역 변수 초기화 (localStorage 제거됨) ─────────────────────
 let inquiries = [];
 let notifs = [];
 let nextId = 1;
@@ -400,7 +393,7 @@ function switchTab(name, el) {
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='inquiries') renderTable();
   
-  // 알림 탭 진입 시 읽음 처리
+  // 알림 탭 진입 시 DB에 읽음 처리 업데이트
   if(name==='notifications') { 
     notifs.filter(n => n.unread).forEach(n => {
       db.collection("notifs").doc(String(n.id)).update({ unread: false });
@@ -420,7 +413,7 @@ function getStats() {
   return { total:inquiries.length, won, lost, pending, decided, rate, totalAmt };
 }
 
-// ── Render: Dashboard ─────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────
 function renderMetrics() {
   const s = getStats();
   document.getElementById('metrics').innerHTML = `
@@ -480,7 +473,6 @@ function renderTrend() {
   });
 }
 
-// ── Render: Table ─────────────────────────────────────────────
 function renderTable() {
   const r=document.getElementById('f-rep').value;
   const s=document.getElementById('f-status').value;
@@ -515,7 +507,6 @@ function renderTable() {
     : '<tr><td colspan="11" class="empty">해당하는 항목 없음</td></tr>';
 }
 
-// ── Render: Notifications ─────────────────────────────────────
 function renderNotifs() {
   const el=document.getElementById('notif-list');
   const sortedNotifs = [...notifs].sort((a,b)=>b.id-a.id);
@@ -544,7 +535,6 @@ function updateBadges() {
   else pn.style.display='none';
 }
 
-// ── Render: Analytics ────────────────────────────────────────
 function renderAnalytics() {
   ['rep-chart','result-chart','rate-chart'].forEach(id=>{if(charts[id])charts[id].destroy();});
   const reps=['BML','LSB','POL','YSJ'];
@@ -572,6 +562,11 @@ function renderAnalytics() {
     data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
   });
+}
+
+function renderAll() {
+  renderMetrics(); renderRepStats(); renderRecent(); updateBadges(); renderNotifs();
+  setTimeout(renderTrend, 80);
 }
 
 // ── Webhooks (Discord & Sheets) ───────────────────────────────
@@ -618,7 +613,6 @@ async function submitInquiry() {
     status: '대기중', price: null, supplier: '', delivery: '', memo: '', quoteDate: null
   };
   
-  // 파이어베이스에 직접 쓰기 (중요!)
   await db.collection("inquiries").doc(String(inq.id)).set(inq);
 
   const notif = { id: Date.now(), type: 'inquiry', text: `${rep} → 구매: ${customer} ${product} 견적 문의`, time: nowStr(), unread: true };
@@ -675,7 +669,6 @@ async function submitQuote() {
     quoteDate: new Date().toISOString().slice(0,10)
   };
 
-  // 파이어베이스 수정하기 (중요!)
   await db.collection("inquiries").doc(String(quoteTarget)).update(updates);
 
   const notif = { id: Date.now(), type: 'quote', text: `구매 → ${i.rep}: ${i.customer} ${i.product} 견적 완료`, time: nowStr(), unread: true };
@@ -726,7 +719,6 @@ async function submitResult() {
   const newStatus = document.getElementById('r-result').value;
   const newMemo = document.getElementById('r-memo').value;
 
-  // 파이어베이스 수정하기 (중요!)
   await db.collection("inquiries").doc(String(resultTarget)).update({
     status: newStatus,
     memo: newMemo
@@ -765,13 +757,7 @@ async function deleteInquiry(id) {
   if(!i) return;
   if(!confirm(`[${i.customer}] ${i.product} 견적을 삭제하시겠습니까?`)) return;
   
-  // 파이어베이스에서 완전 삭제
   await db.collection("inquiries").doc(String(id)).delete();
-}
-
-function renderAll() {
-  renderMetrics(); renderRepStats(); renderRecent(); updateBadges(); renderNotifs();
-  setTimeout(renderTrend, 80);
 }
 
 // ── 엑셀 출력 기능 ─────────────────────────────────────────────
