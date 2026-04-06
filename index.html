@@ -331,7 +331,7 @@
 </div>
 
 <script>
-// ── 설정 (이메일 주소 및 웹훅) ──────────────────────────────
+// ── 설정 (이메일 및 웹훅) ──────────────────────────────
 const CONFIG = {
   buyerEmail: 'ink@avention.co.kr',
   repEmails: { 'BML': 'avention@avention.co.kr', 'LSB': 'seungbin@avention.co.kr', 'POL': 'seungbin@avention.co.kr', 'YSJ': 'bio@avention.co.kr' },
@@ -358,6 +358,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ── 전역 변수 (초기화) ────────────────────────────────────────
 let inquiries = [];
 let notifs = [];
 let nextId = 1;
@@ -370,7 +371,6 @@ db.collection("inquiries").onSnapshot((snapshot) => {
   inquiries = [];
   snapshot.forEach((doc) => inquiries.push(doc.data()));
   
-  // ID 채번 로직
   nextId = inquiries.length > 0 ? Math.max(...inquiries.map(i => i.id)) + 1 : 1;
   
   renderAll();
@@ -400,13 +400,12 @@ function switchTab(name, el) {
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='inquiries') renderTable();
   
-  // 알림 탭 진입 시 안 읽은 알림을 읽음 처리 (DB 업데이트)
+  // 알림 탭 진입 시 읽음 처리
   if(name==='notifications') { 
     notifs.filter(n => n.unread).forEach(n => {
       db.collection("notifs").doc(String(n.id)).update({ unread: false });
     });
   }
-  
   if(name==='analytics') setTimeout(renderAnalytics, 60);
 }
 
@@ -519,7 +518,6 @@ function renderTable() {
 // ── Render: Notifications ─────────────────────────────────────
 function renderNotifs() {
   const el=document.getElementById('notif-list');
-  // Firestore에서 가져온 알림을 id(생성시간) 역순으로 정렬
   const sortedNotifs = [...notifs].sort((a,b)=>b.id-a.id);
   if(!sortedNotifs.length){el.innerHTML='<div class="empty">알림 없음</div>';return;}
   el.innerHTML=sortedNotifs.map(n=>`
@@ -576,7 +574,7 @@ function renderAnalytics() {
   });
 }
 
-// ── Discord & Sheets ──────────────────────────────────────────
+// ── Webhooks (Discord & Sheets) ───────────────────────────────
 async function sendDiscord(webhookUrl, embed) {
   try {
     await fetch(webhookUrl, {
@@ -598,6 +596,10 @@ async function syncToSheet(inq) {
   } catch(e) { console.error('구글 시트 동기화 실패:', e); }
 }
 
+function nowStr() {
+  return new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(/\. /g,'-').replace('.',':').slice(0,-3);
+}
+
 // ── Submit: 견적 문의 등록 ────────────────────────────────────
 async function submitInquiry() {
   const rep=document.getElementById('i-rep').value;
@@ -616,10 +618,9 @@ async function submitInquiry() {
     status: '대기중', price: null, supplier: '', delivery: '', memo: '', quoteDate: null
   };
   
-  // 파이어베이스 저장 (Inquiry)
+  // 파이어베이스에 직접 쓰기 (중요!)
   await db.collection("inquiries").doc(String(inq.id)).set(inq);
 
-  // 파이어베이스 저장 (Notification)
   const notif = { id: Date.now(), type: 'inquiry', text: `${rep} → 구매: ${customer} ${product} 견적 문의`, time: nowStr(), unread: true };
   await db.collection("notifs").doc(String(notif.id)).set(notif);
 
@@ -674,10 +675,9 @@ async function submitQuote() {
     quoteDate: new Date().toISOString().slice(0,10)
   };
 
-  // 파이어베이스 수정 (Inquiry)
+  // 파이어베이스 수정하기 (중요!)
   await db.collection("inquiries").doc(String(quoteTarget)).update(updates);
 
-  // 파이어베이스 저장 (Notification)
   const notif = { id: Date.now(), type: 'quote', text: `구매 → ${i.rep}: ${i.customer} ${i.product} 견적 완료`, time: nowStr(), unread: true };
   await db.collection("notifs").doc(String(notif.id)).set(notif);
 
@@ -686,7 +686,6 @@ async function submitQuote() {
   sb.classList.add('show');
   st.textContent='디스코드 알림 전송 중...';
 
-  // 시트/디스코드 발송을 위해 임시로 로컬 객체에 병합
   Object.assign(i, updates);
 
   await sendDiscord(CONFIG.discordRep, {
@@ -727,17 +726,15 @@ async function submitResult() {
   const newStatus = document.getElementById('r-result').value;
   const newMemo = document.getElementById('r-memo').value;
 
-  // 파이어베이스 수정 (Inquiry)
+  // 파이어베이스 수정하기 (중요!)
   await db.collection("inquiries").doc(String(resultTarget)).update({
     status: newStatus,
     memo: newMemo
   });
 
-  // 파이어베이스 저장 (Notification)
   const notif = { id: Date.now(), type: 'result', text: `수주확정 → ${i.rep}: ${i.customer} ${i.product} [${newStatus}]`, time: nowStr(), unread: true };
   await db.collection("notifs").doc(String(notif.id)).set(notif);
 
-  // 시트/디스코드 발송을 위해 임시로 로컬 객체에 병합
   i.status = newStatus;
   i.memo = newMemo;
 
@@ -762,17 +759,14 @@ async function submitResult() {
   closeModal('result-modal');
 }
 
+// ── 삭제 기능 ───────────────────────────────────────────────
 async function deleteInquiry(id) {
   const i = inquiries.find(x=>x.id===id);
   if(!i) return;
   if(!confirm(`[${i.customer}] ${i.product} 견적을 삭제하시겠습니까?`)) return;
   
-  // 파이어베이스 문서 삭제
+  // 파이어베이스에서 완전 삭제
   await db.collection("inquiries").doc(String(id)).delete();
-}
-
-function nowStr() {
-  return new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(/\. /g,'-').replace('.',':').slice(0,-3);
 }
 
 function renderAll() {
