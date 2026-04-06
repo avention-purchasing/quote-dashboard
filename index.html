@@ -3,821 +3,270 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>견적 수주율 관리 대시보드</title>
+<title>어벤션 견적 관리 대시보드</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f3;
-    --bg-tertiary: #eeece6;
-    --bg-info: #e6f1fb;
-    --text-primary: #1a1a18;
-    --text-secondary: #6b6b67;
-    --text-tertiary: #a0a09a;
-    --text-info: #0c447c;
-    --border: rgba(0,0,0,0.12);
-    --border-hover: rgba(0,0,0,0.25);
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --font: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --bg-primary: #ffffff; --bg-secondary: #f5f5f3; --bg-tertiary: #eeece6;
+    --text-primary: #1a1a18; --text-secondary: #6b6b67; --border: rgba(0,0,0,0.12);
+    --radius-md: 8px; --radius-lg: 12px; --font: 'Pretendard', sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg-primary: #1c1c1a;
-      --bg-secondary: #252523;
-      --bg-tertiary: #2e2e2b;
-      --bg-info: #0c2440;
-      --text-primary: #f0ede6;
-      --text-secondary: #a0a09a;
-      --text-tertiary: #6b6b67;
-      --text-info: #85b7eb;
-      --border: rgba(255,255,255,0.12);
-      --border-hover: rgba(255,255,255,0.25);
-    }
-  }
-
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  .app { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+
+  /* 로그인 화면 */
+  #login-screen { position: fixed; inset: 0; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .login-card { background: white; padding: 2.5rem; border-radius: var(--radius-lg); text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 90%; max-width: 400px; }
+  .login-card h1 { font-size: 20px; margin-bottom: 8px; }
+  .login-card p { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
+  .google-btn { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .google-btn:hover { background: #f9f9f9; }
+
+  /* 메인 앱 (로그인 전 숨김) */
+  #main-app { display: none; max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+  #main-app.show { display: block; }
+
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
-
-  /* Header */
-  .header { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-  .header-left h1 { font-size: 17px; font-weight: 600; }
-  .header-left p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-
-  /* Tabs */
-  .tab-bar { display: flex; gap: 0; padding: 0 1.5rem; border-bottom: 0.5px solid var(--border); overflow-x: auto; }
-  .tab { padding: 12px 16px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-secondary); white-space: nowrap; transition: all 0.15s; }
-  .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 500; }
-  .tab:hover:not(.active) { color: var(--text-primary); }
-
-  /* Content */
+  .header { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .tab-bar { display: flex; padding: 0 1.5rem; border-bottom: 0.5px solid var(--border); overflow-x: auto; }
+  .tab { padding: 12px 16px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-secondary); white-space: nowrap; }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 600; }
+  
   .content { padding: 1.5rem; display: none; }
   .content.active { display: block; }
 
-  /* Metrics */
-  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-  @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .metric { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 1rem; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-md); }
   .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; }
-  .metric-value { font-size: 22px; font-weight: 600; }
-  .metric-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
-  .green { color: #3B6D11; } .amber { color: #854F0B; }
-  @media (prefers-color-scheme: dark) { .green { color: #97C459; } .amber { color: #EF9F27; } }
+  .metric-value { font-size: 20px; font-weight: 600; }
 
-  /* Two-col */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
-
-  /* Cards */
-  .card { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; }
-  .card-pad { padding: 1rem; }
-  .section-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
-
-  /* Table */
-  .table-wrap { overflow-x: auto; }
+  .btn { padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-size: 12px; background: white; }
+  .btn-primary { background: #1a1a18; color: white; border-color: #1a1a18; }
+  
+  .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text-secondary); border-bottom: 0.5px solid var(--border); background: var(--bg-secondary); white-space: nowrap; }
-  td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--bg-secondary); }
+  th { padding: 10px; background: var(--bg-secondary); text-align: left; font-size: 11px; color: var(--text-secondary); }
+  td { padding: 10px; border-bottom: 1px solid var(--border); }
 
-  /* Badges */
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
-  .b-wait { background: #FAEEDA; color: #633806; }
-  .b-quoted { background: #E6F1FB; color: #0C447C; }
-  .b-won { background: #EAF3DE; color: #27500A; }
-  .b-lost { background: #FCEBEB; color: #791F1F; }
-
-  /* Buttons */
-  .btn { padding: 7px 14px; border: 0.5px solid var(--border-hover); border-radius: var(--radius-md); background: transparent; cursor: pointer; font-size: 12px; color: var(--text-primary); font-family: var(--font); transition: background 0.15s; }
-  .btn:hover { background: var(--bg-secondary); }
-  .btn-primary { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
-  .btn-primary:hover { opacity: 0.85; }
-  .btn-sm { padding: 4px 10px; font-size: 11px; }
-
-  /* Notification dot */
-  .dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; margin-left: 5px; vertical-align: middle; }
-
-  /* Modal */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; align-items: center; justify-content: center; padding: 1rem; }
+  /* 모달 */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
   .overlay.open { display: flex; }
-  .modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
-  .modal-head { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .modal-head h2 { font-size: 15px; font-weight: 500; }
-  .modal-body { padding: 1.25rem 1.5rem; }
-  .modal-foot { padding: 1rem 1.5rem; border-top: 0.5px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-  .x-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-secondary); line-height: 1; }
-
-  /* Form */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-  .form-full { grid-column: 1 / -1; }
-  .fg { display: flex; flex-direction: column; gap: 5px; }
-  .fg label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
-  .fg input, .fg select, .fg textarea { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 8px 10px; font-size: 13px; font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); }
-  .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--border-hover); }
-  .fg textarea { resize: vertical; min-height: 65px; }
-
-  /* Filter bar */
-  .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-  .filter-bar select { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); }
-
-  /* Status banner */
-  .status-banner { background: var(--bg-info); border: 0.5px solid #b5d4f4; border-radius: var(--radius-md); padding: 9px 12px; font-size: 12px; color: var(--text-info); margin-top: 10px; display: none; align-items: center; gap: 7px; }
-  .status-banner.show { display: flex; }
-
-  /* Rep rows */
-  .rep-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 0.5px solid var(--border); }
-  .rep-row:last-child { border-bottom: none; }
-  .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-  .av-b { background: #B5D4F4; color: #0C447C; }
-  .av-t { background: #9FE1CB; color: #085041; }
-  .av-c { background: #F5C4B3; color: #712B13; }
-  .av-p { background: #CECBF6; color: #3C3489; }
-  .rep-name { font-size: 13px; font-weight: 500; min-width: 50px; }
-  .rep-meta { font-size: 11px; color: var(--text-secondary); flex: 1; display: flex; gap: 12px; }
-  .rep-meta b { color: var(--text-primary); }
-  .rate-wrap { min-width: 70px; text-align: right; }
-  .rate-num { font-size: 13px; font-weight: 600; }
-  .prog { width: 100%; height: 5px; background: var(--bg-secondary); border-radius: 3px; margin-top: 4px; overflow: hidden; }
-  .prog-fill { height: 100%; border-radius: 3px; background: #639922; }
-
-  /* Recent list */
-  .recent-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 0.5px solid var(--border); font-size: 12px; }
-  .recent-item:last-child { border-bottom: none; }
-
-  /* Notification */
-  .notif-item { padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
-  .notif-item:last-child { border-bottom: none; }
-  .notif-item.unread { background: var(--bg-info); }
-  .notif-text { font-size: 13px; display: flex; align-items: center; gap: 7px; }
-  .notif-time { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; padding-left: 13px; }
-
-  /* Gmail badge */
-  .gmail-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 10px; font-size: 10px; background: #FAECE7; color: #712B13; }
-
-  /* Empty */
-  .empty { padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 13px; }
-
-  /* Info box */
-  .info-box { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 9px 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
-
-  /* Chart wrap */
-  .chart-wrap { position: relative; width: 100%; }
+  .modal { background: white; border-radius: var(--radius-lg); width: 90%; max-width: 500px; padding: 1.5rem; }
+  .fg { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .fg label { font-size: 11px; font-weight: 600; }
+  .fg input, .fg select, .fg textarea { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
+  .fg textarea { min-height: 80px; resize: vertical; }
+  
+  .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; }
+  .b-wait { background: #FAEEDA; color: #633806; }
+  .dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; margin-left: 5px; }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="shell">
 
+<div id="login-screen">
+  <div class="login-card">
+    <h1>어벤션 견적 관리</h1>
+    <p>사내 직원 전용 시스템입니다.<br>회사 구글 계정으로 로그인해주세요.</p>
+    <button class="google-btn" onclick="loginWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+      Google 계정으로 로그인
+    </button>
+  </div>
+</div>
+
+<div id="main-app">
+  <div class="shell">
     <div class="header">
-      <div class="header-left">
-        <h1>견적 수주율 관리 대시보드</h1>
-        <p>어벤션 견적 관리</p>
+      <div>
+        <h1 style="font-size:18px;">견적 수주율 대시보드</h1>
+        <p id="user-info" style="font-size:11px; color:var(--text-secondary);"></p>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span id="pending-notif" style="display:none;font-size:12px;color:#854F0B;background:#FAEEDA;padding:5px 10px;border-radius:20px;"></span>
-        <button class="btn btn-primary" onclick="openModal('inq-modal')">+ 견적 문의 등록</button>
-      </div>
+      <button class="btn" onclick="logout()">로그아웃</button>
     </div>
 
     <div class="tab-bar">
       <div class="tab active" onclick="switchTab('dashboard',this)">대시보드</div>
       <div class="tab" onclick="switchTab('inquiries',this)">견적 목록 <span id="pending-dot"></span></div>
-      <div class="tab" onclick="switchTab('notifications',this)">알림 <span id="notif-dot"></span></div>
-      <div class="tab" onclick="switchTab('analytics',this)">분석</div>
     </div>
 
     <div id="tab-dashboard" class="content active">
-      <div class="metrics" id="metrics"></div>
-      <div class="two-col">
-        <div>
-          <div class="section-title">영업담당자별 수주율</div>
-          <div class="card card-pad" id="rep-stats"></div>
-        </div>
-        <div>
-          <div class="section-title">최근 견적 현황</div>
-          <div class="card" id="recent-list"></div>
-        </div>
-      </div>
-      <div class="section-title" style="margin-top:1rem;">월별 수주율 추이</div>
-      <div class="card card-pad">
-        <div class="chart-wrap" style="height:200px;"><canvas id="trend-chart"></canvas></div>
-      </div>
+      <div class="metrics" id="metrics-grid"></div>
+      <button class="btn btn-primary" onclick="openModal('inq-modal')">+ 신규 견적 문의 등록</button>
     </div>
 
     <div id="tab-inquiries" class="content">
       <div class="filter-bar">
-        <select id="f-rep" onchange="renderTable()"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
-        <select id="f-status" onchange="renderTable()"><option value="">전체 상태</option><option>대기중</option><option>견적완료</option><option>수주</option><option>미수주</option></select>
+        <span style="font-size:13px; font-weight:600;">견적 내역</span>
         <span style="flex:1;"></span>
-        <button class="btn btn-sm" style="border-color: #1D9E75; color: #1D9E75; font-weight: 500;" onclick="exportExcel()">엑셀 다운로드</button>
-        <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
+        <button class="btn" style="color:#1D9E75; border-color:#1D9E75;" onclick="exportExcel()">엑셀 다운로드</button>
       </div>
-      <div class="card table-wrap">
+      <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>문의일</th><th>담당자</th><th>고객사</th><th>Cat No.</th><th>제품명</th><th>CAS No.</th><th>Package</th><th>수량</th><th>금액</th><th>상태</th><th>액션</th>
-          </tr></thead>
+          <thead>
+            <tr><th>문의일</th><th>담당자</th><th>고객사</th><th>제품명</th><th>상태</th><th>액션</th></tr>
+          </thead>
           <tbody id="inq-tbody"></tbody>
         </table>
       </div>
     </div>
+  </div>
+</div>
 
-    <div id="tab-notifications" class="content">
-      <div class="section-title">알림 내역</div>
-      <div class="card" id="notif-list"></div>
-    </div>
-
-    <div id="tab-analytics" class="content">
-      <div class="two-col">
-        <div>
-          <div class="section-title">담당자별 수주 건수</div>
-          <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="rep-chart"></canvas></div></div>
-        </div>
-        <div>
-          <div class="section-title">전체 결과 현황</div>
-          <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="result-chart"></canvas></div></div>
-        </div>
-      </div>
-      <div class="section-title">담당자별 수주율 비교</div>
-      <div class="card card-pad"><div class="chart-wrap" style="height:200px;"><canvas id="rate-chart"></canvas></div></div>
-    </div>
-
-  </div></div><div class="overlay" id="inq-modal">
+<div class="overlay" id="inq-modal">
   <div class="modal">
-    <div class="modal-head"><h2>신규 견적 문의 등록</h2><button class="x-btn" onclick="closeModal('inq-modal')">×</button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="fg"><label>영업담당자</label><select id="i-rep"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
-        <div class="fg"><label>고객사</label><input id="i-customer" type="text" placeholder="고객사명"></div>
-        <div class="fg"><label>Cat No.</label><input id="i-partno" type="text" placeholder="예: G7513"></div>
-        <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명"></div>
-        <div class="fg"><label>CAS No.</label><input id="i-casno" type="text" placeholder="예: 67-68-5"></div>
-        <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="예: 500mL, 1g, 96well"></div>
-        <div class="fg"><label>수량</label><input id="i-qty" type="text" placeholder="수량"></div>
-        <div class="fg form-full"><label>메모</label><textarea id="i-memo" placeholder="견적 요청 시 특이사항이나 메모를 남겨주세요."></textarea></div>
-      </div>
-      <div id="inq-status" class="status-banner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
-        <span id="inq-status-text"></span>
-      </div>
+    <h2 style="font-size:16px; margin-bottom:15px;">신규 견적 문의 등록</h2>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div class="fg"><label>영업담당자</label><select id="i-rep"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
+      <div class="fg"><label>고객사</label><input id="i-customer" type="text" placeholder="고객사명"></div>
     </div>
-    <div class="modal-foot">
+    <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명 입력"></div>
+    <div class="fg"><label>메모 (요청사항)</label><textarea id="i-memo" placeholder="추가 전달 사항을 입력하세요."></textarea></div>
+    <div style="text-align:right; margin-top:15px;">
       <button class="btn" onclick="closeModal('inq-modal')">취소</button>
-      <button class="btn btn-primary" onclick="submitInquiry()">등록 + 구매담당자 알림</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="quote-modal">
-  <div class="modal">
-    <div class="modal-head"><h2>견적 입력</h2><button class="x-btn" onclick="closeModal('quote-modal')">×</button></div>
-    <div class="modal-body">
-      <div class="info-box" id="quote-info"></div>
-      <div class="form-grid">
-        <div class="fg"><label>견적 금액 (원)</label><input id="q-price" type="number" placeholder="0"></div>
-        <div class="fg"><label>납기 가능일</label><input id="q-delivery" type="date"></div>
-        <div class="fg form-full"><label>공급사</label><input id="q-supplier" type="text" placeholder="공급사명"></div>
-        <div class="fg form-full"><label>메모</label><textarea id="q-memo" placeholder="특이사항"></textarea></div>
-      </div>
-      <div id="quote-status" class="status-banner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
-        <span id="quote-status-text"></span>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('quote-modal')">취소</button>
-      <button class="btn btn-primary" onclick="submitQuote()">견적 저장 + 영업팀 알림</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="result-modal">
-  <div class="modal" style="max-width:360px;">
-    <div class="modal-head"><h2>수주 여부 업데이트</h2><button class="x-btn" onclick="closeModal('result-modal')">×</button></div>
-    <div class="modal-body">
-      <div class="info-box" id="result-info"></div>
-      <div class="fg" style="margin-top:12px;">
-        <label>수주 결과</label>
-        <select id="r-result">
-          <option value="수주">수주</option>
-          <option value="미수주">미수주</option>
-        </select>
-      </div>
-      <div class="fg" style="margin-top:12px;">
-        <label>메모 (선택)</label>
-        <textarea id="r-memo" placeholder="미수주 사유 등"></textarea>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('result-modal')">취소</button>
-      <button class="btn btn-primary" onclick="submitResult()">저장</button>
+      <button class="btn btn-primary" onclick="submitInquiry()">등록 + 알림 전송</button>
     </div>
   </div>
 </div>
 
 <script>
-// ── 설정 (이메일 주소 및 웹훅) ──────────────────────────────
-const CONFIG = {
-  buyerEmail: 'ink@avention.co.kr',
-  repEmails: { 'BML': 'avention@avention.co.kr', 'LSB': 'seungbin@avention.co.kr', 'POL': 'seungbin@avention.co.kr', 'YSJ': 'bio@avention.co.kr' },
-  discordBuyer: 'https://discord.com/api/webhooks/1490536970223353947/fzC0wssKrg5FDqkURsh-PUpK7xfJzWNAcDyiFSxsczbQSYCLJGhSewbjeMf0lofc3iLc',
-  discordRep:   'https://discord.com/api/webhooks/1490537189795303435/IZH8O3AXoP9vSE3EJc6sNJmM-MMWVjcUL32ufess1JfoX2w1JW9zrN8dv71TWsL-drQa',
-  sheetsUrl: 'https://script.google.com/macros/s/AKfycbzUX87JH06siBmOZ4ajXAxPh7y9DnPd23AN5CMaQe7if6kZywQy4p7OlINSoaihBr-Y/exec',
-  useApiNotify: false
-};
-
-const STATUS_BADGE = { '대기중':'b-wait', '견적완료':'b-quoted', '수주':'b-won', '미수주':'b-lost' };
-const AV = ['av-b','av-t','av-c','av-p'];
-
-// ── 파이어베이스 초기화 ──────────────────────────────────────
+// ── 파이어베이스 설정 ──────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDXolC9bL4pdBAcLTHC2tsEAmKkCilYAVw",
   authDomain: "avention-quote.firebaseapp.com",
   projectId: "avention-quote",
   storageBucket: "avention-quote.firebasestorage.app",
   messagingSenderId: "963602798000",
-  appId: "1:963602798000:web:b9f126a5c44270c4c0b275",
-  measurementId: "G-JM832Y43DW"
+  appId: "1:963602798000:web:b9f126a5c44270c4c0b275"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
-// ── 전역 변수 초기화 ──────────────────────────────────────────
 let inquiries = [];
-let notifs = [];
-let nextId = 1;
-let quoteTarget = null;
-let resultTarget = null;
-const charts = {};
 
-// ── 실시간 데이터 리스너 (Firestore) ──────────────────────────
-db.collection("inquiries").onSnapshot((snapshot) => {
-  inquiries = [];
-  snapshot.forEach((doc) => inquiries.push(doc.data()));
-  
-  nextId = inquiries.length > 0 ? Math.max(...inquiries.map(i => i.id)) + 1 : 1;
-  
-  renderAll();
-  if(document.getElementById('tab-inquiries').classList.contains('active')) renderTable();
+// 🔒 [소유님 요청] 로그인 감지 및 권한 체크 로직
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    const isAventionStaff = user.email.endsWith('@avention.co.kr');
+    const isMaster = user.email === 'ink@avention.co.kr';
+
+    if (isAventionStaff || isMaster) {
+      // 성공: 화면 전환 및 데이터 시작
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('main-app').classList.add('show');
+      document.getElementById('user-info').textContent = `${user.displayName}님 접속 중`;
+      startListening(); 
+    } else {
+      // 실패: 경고 및 로그아웃
+      alert("접근 권한이 없습니다. 어벤션 회사 계정으로 로그인해주세요.");
+      auth.signOut();
+    }
+  } else {
+    // 로그아웃 상태
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-app').classList.remove('show');
+  }
 });
 
-db.collection("notifs").onSnapshot((snapshot) => {
-  notifs = [];
-  snapshot.forEach((doc) => notifs.push(doc.data()));
-  renderNotifs();
-  updateBadges();
-});
-
-// ── Modal ─────────────────────────────────────────────────────
-function openModal(id) { 
-  document.getElementById(id).classList.add('open'); 
-  
-  // 모달 열 때 입력란 초기화 기능 (선택사항)
-  if(id === 'inq-modal') {
-    document.getElementById('i-customer').value = '';
-    document.getElementById('i-partno').value = '';
-    document.getElementById('i-product').value = '';
-    document.getElementById('i-casno').value = '';
-    document.getElementById('i-pkg').value = '';
-    document.getElementById('i-qty').value = '';
-    document.getElementById('i-memo').value = '';
-  }
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-  if(document.getElementById('inq-status')) document.getElementById('inq-status').classList.remove('show');
-  if(document.getElementById('quote-status')) document.getElementById('quote-status').classList.remove('show');
+function loginWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => alert("로그인 실패: " + err.message));
 }
 
-// ── Tab ───────────────────────────────────────────────────────
-function switchTab(name, el) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
-  if(name==='inquiries') renderTable();
-  
-  // 알림 탭 진입 시 DB에 읽음 처리 업데이트
-  if(name==='notifications') { 
-    notifs.filter(n => n.unread).forEach(n => {
-      db.collection("notifs").doc(String(n.id)).update({ unread: false });
-    });
-  }
-  if(name==='analytics') setTimeout(renderAnalytics, 60);
-}
+function logout() { auth.signOut(); }
 
-// ── Stats ─────────────────────────────────────────────────────
-function getStats() {
-  const won = inquiries.filter(i=>i.status==='수주').length;
-  const lost = inquiries.filter(i=>i.status==='미수주').length;
-  const pending = inquiries.filter(i=>i.status==='대기중').length;
-  const decided = won + lost;
-  const rate = decided > 0 ? Math.round(won/decided*100) : 0;
-  const totalAmt = inquiries.filter(i=>i.status==='수주'&&i.price).reduce((s,i)=>s+i.price,0);
-  return { total:inquiries.length, won, lost, pending, decided, rate, totalAmt };
-}
-
-// ── Render ────────────────────────────────────────────────────
-function renderMetrics() {
-  const s = getStats();
-  document.getElementById('metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">전체 견적 문의</div><div class="metric-value">${s.total}건</div><div class="metric-sub">누적</div></div>
-    <div class="metric"><div class="metric-label">수주율</div><div class="metric-value green">${s.rate}%</div><div class="metric-sub">수주 ${s.won} / 결정 ${s.decided}건</div></div>
-    <div class="metric"><div class="metric-label">대기중 (미견적)</div><div class="metric-value amber">${s.pending}건</div><div class="metric-sub">견적 입력 필요</div></div>
-    <div class="metric"><div class="metric-label">수주 총액</div><div class="metric-value">${(s.totalAmt/1000000).toFixed(1)}M원</div><div class="metric-sub">누적</div></div>
-  `;
-}
-
-function renderRepStats() {
-  const reps = ['BML','LSB','POL','YSJ'];
-  let html = '';
-  reps.forEach((rep,i)=>{
-    const mine = inquiries.filter(x=>x.rep===rep);
-    const won = mine.filter(x=>x.status==='수주').length;
-    const decided = won + mine.filter(x=>x.status==='미수주').length;
-    const rate = decided>0?Math.round(won/decided*100):0;
-    const initials = rep[0]+rep[rep.length-1];
-    html += `<div class="rep-row">
-      <div class="avatar ${AV[i]}">${initials}</div>
-      <div class="rep-name">${rep}</div>
-      <div class="rep-meta"><span>문의 <b>${mine.length}</b></span><span>수주 <b>${won}</b></span><span>미수주 <b>${mine.filter(x=>x.status==='미수주').length}</b></span></div>
-      <div class="rate-wrap">
-        <div class="rate-num">${rate}%</div>
-        <div class="prog"><div class="prog-fill" style="width:${rate}%"></div></div>
-      </div>
-    </div>`;
-  });
-  document.getElementById('rep-stats').innerHTML = html;
-}
-
-function renderRecent() {
-  const list = [...inquiries].sort((a,b)=>b.id-a.id).slice(0,6);
-  document.getElementById('recent-list').innerHTML = list.map(i=>`
-    <div class="recent-item">
-      <span class="badge ${STATUS_BADGE[i.status]||'b-wait'}">${i.status}</span>
-      <span style="color:var(--text-secondary);min-width:35px;">${i.rep}</span>
-      <span style="font-weight:500;flex:1;">${i.customer}</span>
-      <span style="color:var(--text-secondary);font-size:11px;">${i.product.length>10?i.product.slice(0,10)+'…':i.product}</span>
-    </div>`).join('');
-}
-
-function renderTrend() {
-  if(charts['trend']) charts['trend'].destroy();
-  const months=['1월','2월','3월','4월'];
-  const data=months.map((_,mi)=>{
-    const mo=String(mi+1).padStart(2,'0');
-    const dec=inquiries.filter(i=>i.quoteDate&&i.quoteDate.includes(`2026-${mo}`)&&['수주','미수주'].includes(i.status));
-    const w=dec.filter(i=>i.status==='수주').length;
-    return dec.length>0?Math.round(w/dec.length*100):null;
-  });
-  charts['trend']=new Chart(document.getElementById('trend-chart'),{
-    type:'line',
-    data:{labels:months,datasets:[{label:'수주율',data,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#1D9E75',spanGaps:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+// ── 데이터 연동 (실시간) ──────────────────────────────
+function startListening() {
+  db.collection("inquiries").orderBy("id", "desc").onSnapshot((snapshot) => {
+    inquiries = [];
+    snapshot.forEach((doc) => inquiries.push(doc.data()));
+    renderAll();
   });
 }
 
-function renderTable() {
-  const r=document.getElementById('f-rep').value;
-  const s=document.getElementById('f-status').value;
-  const list=inquiries.filter(i=>{
-    if(r&&i.rep!==r)return false;
-    if(s&&i.status!==s)return false;
-    return true;
-  }).sort((a,b)=>b.id-a.id);
-  document.getElementById('table-count').textContent=`총 ${list.length}건`;
-  document.getElementById('inq-tbody').innerHTML = list.length ? list.map(i=>`
-    <tr>
-      <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${i.date}</td>
-      <td>${i.rep}</td>
-      <td style="font-weight:500;">${i.customer}</td>
-      <td style="font-size:11px;">${i.partNo||'-'}</td>
-      <td style="font-size:12px;">${i.product.length>12?i.product.slice(0,12)+'…':i.product}</td>
-      <td style="font-size:11px;color:var(--text-secondary);">${i.casNo||'-'}</td>
-      <td style="font-size:11px;">${i.pkg||'-'}</td>
-      <td style="font-size:12px;">${i.qty||'-'}</td>
-      <td style="font-size:12px;">${i.price?'₩'+(i.price/10000).toFixed(0)+'만':'-'}</td>
-      <td><span class="badge ${STATUS_BADGE[i.status]||'b-wait'}">${i.status}</span></td>
-      <td style="display:flex;gap:5px;">
-        ${i.status==='대기중'
-          ?`<button class="btn btn-sm btn-primary" onclick="openQuoteModal(${i.id})">견적입력</button>`
-          :`<button class="btn btn-sm" onclick="openQuoteModal(${i.id})">견적수정</button>`}
-        ${i.status==='견적완료'
-          ?`<button class="btn btn-sm" style="color:#27500A;border-color:#C0DD97;" onclick="openResultModal(${i.id})">수주확정</button>`
-          :''}
-        <button class="btn btn-sm" style="color:#E24B4A;border-color:#F09595;" onclick="deleteInquiry(${i.id})">삭제</button>
-      </td>
-    </tr>`).join('')
-    : '<tr><td colspan="11" class="empty">해당하는 항목 없음</td></tr>';
-}
-
-function renderNotifs() {
-  const el=document.getElementById('notif-list');
-  const sortedNotifs = [...notifs].sort((a,b)=>b.id-a.id);
-  if(!sortedNotifs.length){el.innerHTML='<div class="empty">알림 없음</div>';return;}
-  el.innerHTML=sortedNotifs.map(n=>`
-    <div class="notif-item${n.unread?' unread':''}">
-      <div class="notif-text">
-        ${n.unread?`<span class="dot"></span>`:'<span style="width:6px;display:inline-block;"></span>'}
-        <span>${n.text}</span>
-        <span class="gmail-badge">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
-          알림
-        </span>
-      </div>
-      <div class="notif-time">${n.time}</div>
-    </div>`).join('');
-}
-
-function updateBadges() {
-  const pending=inquiries.filter(i=>i.status==='대기중').length;
-  const unread=notifs.filter(n=>n.unread).length;
-  document.getElementById('pending-dot').innerHTML=pending>0?`<span class="dot"></span>`:'';
-  document.getElementById('notif-dot').innerHTML=unread>0?`<span class="dot"></span>`:'';
-  const pn=document.getElementById('pending-notif');
-  if(pending>0){pn.style.display='inline-block';pn.textContent=`미처리 ${pending}건`;}
-  else pn.style.display='none';
-}
-
-function renderAnalytics() {
-  ['rep-chart','result-chart','rate-chart'].forEach(id=>{if(charts[id])charts[id].destroy();});
-  const reps=['BML','LSB','POL','YSJ'];
-  charts['rep-chart']=new Chart(document.getElementById('rep-chart'),{
-    type:'doughnut',
-    data:{labels:reps,datasets:[{data:reps.map(r=>inquiries.filter(i=>i.rep===r&&i.status==='수주').length),backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
-  });
-  const won=inquiries.filter(i=>i.status==='수주').length;
-  const lost=inquiries.filter(i=>i.status==='미수주').length;
-  const quoted=inquiries.filter(i=>i.status==='견적완료').length;
-  const wait=inquiries.filter(i=>i.status==='대기중').length;
-  charts['result-chart']=new Chart(document.getElementById('result-chart'),{
-    type:'bar',
-    data:{labels:['수주','미수주','견적완료','대기중'],datasets:[{data:[won,lost,quoted,wait],backgroundColor:['#639922','#E24B4A','#378ADD','#BA7517']}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
-  });
-  const rates=reps.map(r=>{
-    const dec=inquiries.filter(i=>i.rep===r&&['수주','미수주'].includes(i.status));
-    const w=inquiries.filter(i=>i.rep===r&&i.status==='수주').length;
-    return dec.length>0?Math.round(w/dec.length*100):0;
-  });
-  charts['rate-chart']=new Chart(document.getElementById('rate-chart'),{
-    type:'bar',
-    data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
-  });
-}
-
-function renderAll() {
-  renderMetrics(); renderRepStats(); renderRecent(); updateBadges(); renderNotifs();
-  setTimeout(renderTrend, 80);
-}
-
-// ── Webhooks (Discord & Sheets) ───────────────────────────────
-async function sendDiscord(webhookUrl, embed) {
-  try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed] })
-    });
-  } catch(e) { console.error('Discord 알림 실패:', e); }
-}
-
-async function syncToSheet(inq) {
-  try {
-    await fetch(CONFIG.sheetsUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(inq)
-    });
-  } catch(e) { console.error('구글 시트 동기화 실패:', e); }
-}
-
-function nowStr() {
-  return new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(/\. /g,'-').replace('.',':').slice(0,-3);
-}
-
-// ── Submit: 견적 문의 등록 (메모 추가됨) ──────────────────────
 async function submitInquiry() {
-  const rep=document.getElementById('i-rep').value;
-  const customer=document.getElementById('i-customer').value.trim();
-  const product=document.getElementById('i-product').value.trim();
-  if(!customer||!product){alert('고객사와 제품명을 입력해주세요.');return;}
+  const customer = document.getElementById('i-customer').value.trim();
+  const product = document.getElementById('i-product').value.trim();
+  if(!customer || !product) return alert("고객사와 제품명을 입력하세요.");
 
   const inq = {
-    id: nextId, date: new Date().toISOString().slice(0,10),
-    rep, customer,
-    partNo: document.getElementById('i-partno').value.trim(),
+    id: Date.now(),
+    date: new Date().toISOString().slice(0,10),
+    rep: document.getElementById('i-rep').value,
+    customer,
     product,
-    casNo: document.getElementById('i-casno').value.trim(),
-    pkg: document.getElementById('i-pkg').value.trim(),
-    qty: document.getElementById('i-qty').value.trim(),
-    status: '대기중', price: null, supplier: '', delivery: '', 
-    memo: document.getElementById('i-memo').value.trim(), // ✅ 추가된 메모 필드 저장
-    quoteDate: null
-  };
-  
-  await db.collection("inquiries").doc(String(inq.id)).set(inq);
-
-  const notif = { id: Date.now(), type: 'inquiry', text: `${rep} → 구매: ${customer} ${product} 견적 문의`, time: nowStr(), unread: true };
-  await db.collection("notifs").doc(String(notif.id)).set(notif);
-
-  const sb=document.getElementById('inq-status');
-  const st=document.getElementById('inq-status-text');
-  sb.classList.add('show');
-  st.textContent='디스코드 알림 전송 중...';
-
-  await sendDiscord(CONFIG.discordBuyer, {
-    title: '📋 새 견적 문의가 등록됐습니다',
-    color: 0xBA7517,
-    fields: [
-      { name: '영업담당자', value: rep, inline: true },
-      { name: '고객사', value: customer, inline: true },
-      { name: '제품명', value: product, inline: false },
-      { name: 'Cat No.', value: inq.partNo||'-', inline: true },
-      { name: 'CAS No.', value: inq.casNo||'-', inline: true },
-      { name: 'Package', value: inq.pkg||'-', inline: true },
-      { name: '수량', value: inq.qty||'-', inline: true },
-      { name: '메모', value: inq.memo||'-', inline: false } // ✅ 디스코드 알림에도 메모 포함
-    ],
-    footer: { text: '어벤션 견적 대시보드' },
-    timestamp: new Date().toISOString()
-  });
-
-  st.textContent='디스코드 알림 전송 완료!';
-  await syncToSheet(inq);
-  setTimeout(()=>closeModal('inq-modal'), 1600);
-}
-
-// ── Open Quote Modal ──────────────────────────────────────────
-function openQuoteModal(id) {
-  quoteTarget=id;
-  const i=inquiries.find(x=>x.id===id); if(!i) return;
-  document.getElementById('quote-info').textContent=`${i.rep} · ${i.customer} · ${i.product} · Cat No.: ${i.partNo||'-'} · CAS: ${i.casNo||'-'} · ${i.pkg||''} × ${i.qty||''}`;
-  document.getElementById('q-price').value=i.price||'';
-  document.getElementById('q-delivery').value=i.delivery||'';
-  document.getElementById('q-supplier').value=i.supplier||'';
-  
-  // ✅ 견적 문의 시 작성했던 메모를 이어서 볼 수 있도록 입력창에 표시
-  document.getElementById('q-memo').value=i.memo||'';
-  
-  openModal('quote-modal');
-}
-
-// ── Submit: 견적 입력 ─────────────────────────────────────────
-async function submitQuote() {
-  const i=inquiries.find(x=>x.id===quoteTarget); if(!i) return;
-  
-  const updates = {
-    price: parseInt(document.getElementById('q-price').value) || null,
-    delivery: document.getElementById('q-delivery').value,
-    supplier: document.getElementById('q-supplier').value,
-    status: '견적완료',
-    memo: document.getElementById('q-memo').value,
-    quoteDate: new Date().toISOString().slice(0,10)
+    memo: document.getElementById('i-memo').value.trim(),
+    status: '대기중',
+    price: null
   };
 
-  await db.collection("inquiries").doc(String(quoteTarget)).update(updates);
-
-  const notif = { id: Date.now(), type: 'quote', text: `구매 → ${i.rep}: ${i.customer} ${i.product} 견적 완료`, time: nowStr(), unread: true };
-  await db.collection("notifs").doc(String(notif.id)).set(notif);
-
-  const sb=document.getElementById('quote-status');
-  const st=document.getElementById('quote-status-text');
-  sb.classList.add('show');
-  st.textContent='디스코드 알림 전송 중...';
-
-  Object.assign(i, updates);
-
-  await sendDiscord(CONFIG.discordRep, {
-    title: `📨 견적 완료 — ${i.rep}님 확인해주세요`,
-    color: 0x378ADD,
-    fields: [
-      { name: '담당자', value: i.rep, inline: true },
-      { name: '고객사', value: i.customer, inline: true },
-      { name: '제품명', value: i.product, inline: false },
-      { name: 'Cat No.', value: i.partNo||'-', inline: true },
-      { name: '견적 금액', value: i.price ? '₩'+i.price.toLocaleString() : '-', inline: true },
-      { name: '공급사', value: i.supplier||'-', inline: true },
-      { name: '납기 가능일', value: i.delivery||'-', inline: true },
-      { name: '메모', value: i.memo||'-', inline: false },
-    ],
-    footer: { text: '수주 여부는 대시보드 견적 목록 → 수주확정 버튼으로 업데이트해주세요' },
-    timestamp: new Date().toISOString()
-  });
-
-  st.textContent=`${i.rep}에게 디스코드 알림 전송 완료!`;
-  await syncToSheet(i);
-  setTimeout(()=>closeModal('quote-modal'), 1600);
+  try {
+    await db.collection("inquiries").doc(String(inq.id)).set(inq);
+    closeModal('inq-modal');
+  } catch(e) { alert("저장 실패: " + e.message); }
 }
 
-// ── 수주 여부 확정 ────────────────────────────────────────────
-function openResultModal(id) {
-  resultTarget=id;
-  const i=inquiries.find(x=>x.id===id); if(!i) return;
-  document.getElementById('result-info').textContent=`${i.rep} · ${i.customer} · ${i.product} · ₩${i.price?i.price.toLocaleString():'-'}`;
-  document.getElementById('r-result').value='수주';
-  document.getElementById('r-memo').value=i.memo||'';
-  openModal('result-modal');
-}
-
-async function submitResult() {
-  const i=inquiries.find(x=>x.id===resultTarget); if(!i) return;
-  
-  const newStatus = document.getElementById('r-result').value;
-  const newMemo = document.getElementById('r-memo').value;
-
-  await db.collection("inquiries").doc(String(resultTarget)).update({
-    status: newStatus,
-    memo: newMemo
-  });
-
-  const notif = { id: Date.now(), type: 'result', text: `수주확정 → ${i.rep}: ${i.customer} ${i.product} [${newStatus}]`, time: nowStr(), unread: true };
-  await db.collection("notifs").doc(String(notif.id)).set(notif);
-
-  i.status = newStatus;
-  i.memo = newMemo;
-
-  const statusColor = i.status==='수주' ? 0x639922 : 0xE24B4A;
-  const statusEmoji = i.status==='수주' ? '✅' : '❌';
-  await sendDiscord(CONFIG.discordRep, {
-    title: `${statusEmoji} 수주 결과 확정 — ${i.rep}님`,
-    color: statusColor,
-    fields: [
-      { name: '담당자', value: i.rep, inline: true },
-      { name: '결과', value: i.status, inline: true },
-      { name: '고객사', value: i.customer, inline: false },
-      { name: '제품명', value: i.product, inline: true },
-      { name: '금액', value: i.price ? '₩'+i.price.toLocaleString() : '-', inline: true },
-      { name: '메모', value: i.memo||'-', inline: false },
-    ],
-    footer: { text: '어벤션 견적 대시보드' },
-    timestamp: new Date().toISOString()
-  });
-
-  await syncToSheet(i);
-  closeModal('result-modal');
-}
-
-// ── 삭제 기능 ───────────────────────────────────────────────
 async function deleteInquiry(id) {
-  const i = inquiries.find(x=>x.id===id);
-  if(!i) return;
-  if(!confirm(`[${i.customer}] ${i.product} 견적을 삭제하시겠습니까?`)) return;
-  
+  if(!confirm("정말 삭제하시겠습니까?")) return;
   await db.collection("inquiries").doc(String(id)).delete();
 }
 
-// ── 엑셀 출력 기능 ─────────────────────────────────────────────
+// ── 화면 렌더링 ──────────────────────────────────────
+function renderAll() {
+  // 메트릭 업데이트
+  const total = inquiries.length;
+  const pending = inquiries.filter(i => i.status === '대기중').length;
+  const won = inquiries.filter(i => i.status === '수주').length;
+  
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric"><div class="metric-label">전체 견적</div><div class="metric-value">${total}건</div></div>
+    <div class="metric"><div class="metric-label">대기중</div><div class="metric-value" style="color:#BA7517">${pending}건</div></div>
+    <div class="metric"><div class="metric-label">수주성공</div><div class="metric-value" style="color:#3B6D11">${won}건</div></div>
+    <div class="metric"><div class="metric-label">수주율</div><div class="metric-value">${total > 0 ? Math.round(won/total*100) : 0}%</div></div>
+  `;
+
+  // 목록 업데이트
+  document.getElementById('inq-tbody').innerHTML = inquiries.map(i => `
+    <tr>
+      <td>${i.date}</td>
+      <td>${i.rep}</td>
+      <td><strong>${i.customer}</strong></td>
+      <td>${i.product}</td>
+      <td><span class="badge ${i.status === '대기중' ? 'b-wait' : ''}">${i.status}</span></td>
+      <td><button class="btn" style="color:red; border:none;" onclick="deleteInquiry(${i.id})">삭제</button></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pending-dot').innerHTML = pending > 0 ? `<span class="dot"></span>` : '';
+}
+
+// ── 유틸리티 ────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
 function exportExcel() {
-  if (inquiries.length === 0) {
-    alert("출력할 데이터가 없습니다.");
-    return;
-  }
-
-  const excelData = inquiries.map(i => ({
-    '문의일': i.date,
-    '영업담당자': i.rep,
-    '고객사': i.customer,
-    'Cat No.': i.partNo || '',
-    '제품명': i.product,
-    'CAS No.': i.casNo || '',
-    'Package': i.pkg || '',
-    '수량': i.qty || '',
-    '견적 금액(원)': i.price || '',
-    '상태': i.status,
-    '공급사': i.supplier || '',
-    '납기 가능일': i.delivery || '',
-    '메모': i.memo || ''
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-  const colWidths = [
-    { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, 
-    { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, 
-    { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, 
-    { wch: 40 }
-  ];
-  worksheet['!cols'] = colWidths;
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "견적내역");
-
-  const today = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(workbook, `견적관리내역_${today}.xlsx`);
+  if(inquiries.length === 0) return alert("데이터가 없습니다.");
+  const ws = XLSX.utils.json_to_sheet(inquiries);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "견적내역");
+  XLSX.writeFile(wb, `어벤션_견적관리_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 </script>
 </body>
