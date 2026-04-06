@@ -41,20 +41,18 @@
 
   /* 📊 대시보드 통계 카드 */
   .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
-  @media (max-width: 650px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
   .metric { background: var(--bg-secondary); padding: 1.2rem; border-radius: var(--radius-md); }
   .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; }
   .metric-value { font-size: 22px; font-weight: 600; }
   
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
   .card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem; margin-bottom: 1rem; }
   .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
 
-  /* 📋 테이블 및 리스트 */
+  /* 📋 리스트 및 테이블 디테일 */
   .table-wrap { overflow-x: auto; margin-top: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { padding: 10px; background: var(--bg-secondary); text-align: left; font-size: 11px; border-bottom: 1px solid var(--border); }
+  th { padding: 10px; background: var(--bg-secondary); text-align: left; font-size: 11px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
   td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   
   .rep-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
@@ -68,16 +66,20 @@
 
   .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; font-size: 12px; background: white; font-weight: 500; transition: 0.2s; }
   .btn-primary { background: #1a1a18; color: white; border-color: #1a1a18; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+
   .badge { padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; }
   .b-wait { background: #FAEEDA; color: #633806; }
+  .b-quoted { background: #E6F1FB; color: #0C447C; }
   .b-won { background: #EAF3DE; color: #27500A; }
+  .b-lost { background: #FCEBEB; color: #791F1F; }
 
   /* 🪟 모달 */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; }
   .overlay.open { display: flex; }
-  .modal { background: white; border-radius: var(--radius-lg); width: 100%; max-width: 520px; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
-  .fg { margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px; }
-  .fg label { font-size: 12px; font-weight: 600; }
+  .modal { background: white; border-radius: var(--radius-lg); width: 100%; max-width: 550px; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
+  .fg { margin-bottom: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .fg label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
   .fg input, .fg select, .fg textarea { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 13px; }
   .fg textarea { min-height: 80px; resize: vertical; }
 </style>
@@ -88,7 +90,7 @@
   <div class="login-card">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="40" style="margin-bottom:15px;">
     <h1>어벤션 견적 관리</h1>
-    <p>보안을 위해 회사 계정으로 로그인하세요.</p>
+    <p>사내 전용 시스템입니다.<br>회사 구글 계정으로 로그인해주세요.</p>
     <button class="google-btn" onclick="loginWithGoogle()">Google 계정으로 로그인</button>
   </div>
 </div>
@@ -100,7 +102,8 @@
         <h1 style="font-size:18px;">견적 수주율 대시보드</h1>
         <p id="user-info" style="font-size:11px; color:var(--text-secondary);"></p>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span id="pending-badge" style="display:none;font-size:12px;color:#854F0B;background:#FAEEDA;padding:5px 12px;border-radius:20px;"></span>
         <button class="btn btn-primary" onclick="openModal('inq-modal')">+ 견적 문의 등록</button>
         <button class="btn" onclick="logout()">로그아웃</button>
       </div>
@@ -110,7 +113,7 @@
       <div class="tab active" onclick="switchTab('dashboard',this)">대시보드</div>
       <div class="tab" onclick="switchTab('inquiries',this)">견적 목록 <span id="pending-dot"></span></div>
       <div class="tab" onclick="switchTab('notifications',this)">알림</div>
-      <div class="tab" onclick="switchTab('analytics',this)">상세 분석</div>
+      <div class="tab" onclick="switchTab('analytics',this)">분석</div>
     </div>
 
     <div id="tab-dashboard" class="content active">
@@ -125,35 +128,40 @@
           <div class="card" id="recent-list" style="padding:0;"></div>
         </div>
       </div>
-      <div class="section-title" style="margin-top:1rem;">월별 수주율 추이</div>
+      <div class="section-title" style="margin-top:1.5rem;">월별 수주율 추이</div>
       <div class="card" style="height:250px;"><canvas id="trend-chart"></canvas></div>
     </div>
 
     <div id="tab-inquiries" class="content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:8px;">
           <select id="f-rep" onchange="renderTable()" class="btn"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
           <select id="f-status" onchange="renderTable()" class="btn"><option value="">전체 상태</option><option>대기중</option><option>견적완료</option><option>수주</option><option>미수주</option></select>
         </div>
-        <button class="btn" style="color:#1D9E75; border-color:#1D9E75;" onclick="exportExcel()">엑셀 다운로드</button>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
+          <button class="btn" style="color:#1D9E75; border-color:#1D9E75;" onclick="exportExcel()">엑셀 다운로드</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>문의일</th><th>담당자</th><th>고객사</th><th>제품명</th><th>금액</th><th>상태</th><th>액션</th></tr></thead>
+          <thead><tr>
+            <th>문의일</th><th>담당자</th><th>고객사</th><th>Cat No.</th><th>제품명</th><th>CAS No.</th><th>Package</th><th>수량</th><th>금액</th><th>상태</th><th>액션</th>
+          </tr></thead>
           <tbody id="inq-tbody"></tbody>
         </table>
       </div>
     </div>
 
     <div id="tab-notifications" class="content">
-      <div class="section-title">최근 업무 알림</div>
+      <div class="section-title">업무 알림 내역</div>
       <div id="notif-list" class="card" style="padding:0;"></div>
     </div>
 
     <div id="tab-analytics" class="content">
       <div class="two-col">
-        <div class="card"><div class="section-title">결과 분포</div><canvas id="pie-chart" style="height:220px;"></canvas></div>
-        <div class="card"><div class="section-title">담당자별 실적</div><canvas id="bar-chart" style="height:220px;"></canvas></div>
+        <div class="card"><div class="section-title">결과 분포</div><div style="height:220px;"><canvas id="pie-chart"></canvas></div></div>
+        <div class="card"><div class="section-title">담당자별 실적</div><div style="height:220px;"><canvas id="bar-chart"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -165,9 +173,13 @@
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
       <div class="fg"><label>영업담당자</label><select id="i-rep"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
       <div class="fg"><label>고객사</label><input id="i-customer" type="text" placeholder="고객사명"></div>
+      <div class="fg"><label>Cat No.</label><input id="i-partno" type="text" placeholder="예: G7513"></div>
+      <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명"></div>
+      <div class="fg"><label>CAS No.</label><input id="i-casno" type="text" placeholder="예: 67-68-5"></div>
+      <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="예: 500mL"></div>
+      <div class="fg"><label>수량</label><input id="i-qty" type="text" placeholder="수량"></div>
     </div>
-    <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명"></div>
-    <div class="fg"><label>메모 (Cat No, 용량 등 상세 정보)</label><textarea id="i-memo" placeholder="구매팀에 전달할 메모를 입력하세요."></textarea></div>
+    <div class="fg"><label>메모 (요청사항)</label><textarea id="i-memo" placeholder="상세 전달 사항을 입력하세요."></textarea></div>
     <div style="text-align:right; margin-top:10px;">
       <button class="btn" onclick="closeModal('inq-modal')">취소</button>
       <button class="btn btn-primary" onclick="submitInquiry()">등록 완료</button>
@@ -176,6 +188,7 @@
 </div>
 
 <script>
+// ── Firebase & 초기 설정 ──────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDXolC9bL4pdBAcLTHC2tsEAmKkCilYAVw",
   authDomain: "avention-quote.firebaseapp.com",
@@ -192,7 +205,7 @@ let inquiries = [];
 let notifs = [];
 const charts = {};
 
-// 🔒 로그인 감지 및 권한 체크
+// 🔒 보안 로그인 감지
 auth.onAuthStateChanged((user) => {
   if (user) {
     const isAvention = user.email.endsWith('@avention.co.kr');
@@ -200,10 +213,10 @@ auth.onAuthStateChanged((user) => {
     if (isAvention || isOwner) {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('main-app').classList.add('show');
-      document.getElementById('user-info').textContent = `${user.displayName} 소유님 접속 중`;
+      document.getElementById('user-info').textContent = `${user.displayName}님 접속 중`;
       startSync();
     } else {
-      alert("접근 권한이 없습니다.");
+      alert("권한이 없습니다. 어벤션 구글 계정으로 로그인하세요.");
       auth.signOut();
     }
   } else {
@@ -220,12 +233,13 @@ function startSync() {
     inquiries = snap.docs.map(doc => doc.data());
     renderAll();
   });
-  db.collection("notifs").orderBy("id", "desc").limit(8).onSnapshot(snap => {
+  db.collection("notifs").orderBy("id", "desc").limit(10).onSnapshot(snap => {
     notifs = snap.docs.map(doc => doc.data());
     renderNotifs();
   });
 }
 
+// ── 렌더링 로직 ──────────────────────────────────────
 function renderAll() {
   renderMetrics();
   renderRepStats();
@@ -238,13 +252,18 @@ function renderMetrics() {
   const total = inquiries.length;
   const won = inquiries.filter(i => i.status === '수주').length;
   const pending = inquiries.filter(i => i.status === '대기중').length;
-  const rate = total > 0 ? Math.round(won / total * 100) : 0;
+  const rate = total > 0 ? Math.round(won / (won + inquiries.filter(i=>i.status==='미수주').length) * 100) || 0 : 0;
+  
   document.getElementById('metrics-grid').innerHTML = `
     <div class="metric"><div class="metric-label">전체 견적</div><div class="metric-value">${total}건</div></div>
     <div class="metric"><div class="metric-label">수주율</div><div class="metric-value" style="color:#1D9E75">${rate}%</div></div>
     <div class="metric"><div class="metric-label">미처리 대기</div><div class="metric-value" style="color:#BA7517">${pending}건</div></div>
-    <div class="metric"><div class="metric-label">수주 성공</div><div class="metric-value">${won}건</div></div>
+    <div class="metric"><div class="metric-label">수주 총액</div><div class="metric-value">₩${(inquiries.filter(i=>i.status==='수주').reduce((s,i)=>s+(i.price||0),0)/10000).toFixed(0)}만</div></div>
   `;
+  
+  const badge = document.getElementById('pending-badge');
+  if(pending > 0) { badge.style.display='inline-block'; badge.textContent=`미처리 ${pending}건`; }
+  else badge.style.display='none';
 }
 
 function renderRepStats() {
@@ -252,7 +271,8 @@ function renderRepStats() {
   document.getElementById('rep-stats').innerHTML = reps.map(name => {
     const mine = inquiries.filter(i => i.rep === name);
     const won = mine.filter(i => i.status === '수주').length;
-    const rate = mine.length > 0 ? Math.round(won / mine.length * 100) : 0;
+    const decided = won + mine.filter(i => i.status === '미수주').length;
+    const rate = decided > 0 ? Math.round(won / decided * 100) : 0;
     return `
       <div class="rep-row">
         <div class="avatar">${name[0]}</div>
@@ -275,18 +295,31 @@ function renderTable() {
   const rf = document.getElementById('f-rep').value;
   const sf = document.getElementById('f-status').value;
   const filtered = inquiries.filter(i => (!rf || i.rep === rf) && (!sf || i.status === sf));
+  
+  document.getElementById('table-count').textContent = `총 ${filtered.length}건`;
   document.getElementById('inq-tbody').innerHTML = filtered.map(i => `
-    <tr><td style="color:#888;">${i.date}</td><td>${i.rep}</td><td><strong>${i.customer}</strong></td><td>${i.product}</td>
-    <td>${i.price ? '₩'+(i.price/10000).toFixed(0)+'만' : '-'}</td><td><span class="badge ${i.status==='대기중'?'b-wait': i.status==='수주'?'b-won':'b-quoted'}">${i.status}</span></td>
-    <td><button class="btn btn-sm" onclick="deleteInq(${i.id})" style="color:red; border:none;">삭제</button></td></tr>
+    <tr>
+      <td style="font-size:11px; color:#888;">${i.date}</td>
+      <td>${i.rep}</td>
+      <td><strong>${i.customer}</strong></td>
+      <td style="font-size:11px;">${i.partNo||'-'}</td>
+      <td>${i.product}</td>
+      <td style="font-size:11px;">${i.casNo||'-'}</td>
+      <td style="font-size:11px;">${i.pkg||'-'}</td>
+      <td>${i.qty||'-'}</td>
+      <td>${i.price ? '₩'+(i.price/10000).toFixed(0)+'만' : '-'}</td>
+      <td><span class="badge ${i.status==='대기중'?'b-wait': i.status==='수주'?'b-won':'b-quoted'}">${i.status}</span></td>
+      <td><button class="btn btn-sm" onclick="deleteInq(${i.id})" style="color:red; border:none; padding:0;">삭제</button></td>
+    </tr>
   `).join('');
+  
   const pc = inquiries.filter(i => i.status === '대기중').length;
   document.getElementById('pending-dot').innerHTML = pc > 0 ? `<span class="dot"></span>` : '';
 }
 
 function renderNotifs() {
   document.getElementById('notif-list').innerHTML = notifs.map(n => `
-    <div class="notif-item"><div class="dot"></div><div style="font-size:12px;">${n.text} <span style="color:#aaa; font-size:10px;">${n.time}</span></div></div>
+    <div class="notif-item"><div class="dot"></div><div style="font-size:12px;">${n.text} <span style="color:#aaa; font-size:10px; margin-left:8px;">${n.time}</span></div></div>
   `).join('') || '<div style="padding:20px; text-align:center;">알림이 없습니다.</div>';
 }
 
@@ -295,25 +328,36 @@ function renderTrendChart() {
   const ctx = document.getElementById('trend-chart').getContext('2d');
   charts.trend = new Chart(ctx, {
     type: 'line',
-    data: { labels: ['1월','2월','3월','4월'], datasets: [{ label: '수주율', data: [45, 52, 48, 60], borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)', fill: true, tension: 0.4 }] },
+    data: { 
+      labels: ['1월','2월','3월','4월'], 
+      datasets: [{ label: '수주율', data: [45, 52, 48, 60], borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)', fill: true, tension: 0.4 }] 
+    },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
 
+// ── 기능 함수 ──
 async function submitInquiry() {
   const inq = {
     id: Date.now(), date: new Date().toISOString().slice(0,10),
-    rep: document.getElementById('i-rep').value, customer: document.getElementById('i-customer').value.trim(),
-    product: document.getElementById('i-product').value.trim(), memo: document.getElementById('i-memo').value.trim(),
+    rep: document.getElementById('i-rep').value,
+    customer: document.getElementById('i-customer').value.trim(),
+    partNo: document.getElementById('i-partno').value.trim(),
+    product: document.getElementById('i-product').value.trim(),
+    casNo: document.getElementById('i-casno').value.trim(),
+    pkg: document.getElementById('i-pkg').value.trim(),
+    qty: document.getElementById('i-qty').value.trim(),
+    memo: document.getElementById('i-memo').value.trim(),
     status: '대기중', price: null
   };
-  if(!inq.customer || !inq.product) return alert("필수 정보를 입력하세요.");
+  if(!inq.customer || !inq.product) return alert("고객사와 제품명은 필수입니다.");
   await db.collection("inquiries").doc(String(inq.id)).set(inq);
-  await db.collection("notifs").add({ id: Date.now(), text: `${inq.rep}님이 ${inq.customer} 견적 문의 등록`, time: '방금 전' });
+  await db.collection("notifs").add({ id: Date.now(), text: `${inq.rep}님이 ${inq.customer} 신규 견적 문의 등록`, time: '방금 전' });
   closeModal('inq-modal');
 }
 
 async function deleteInq(id) { if(confirm("삭제할까요?")) await db.collection("inquiries").doc(String(id)).delete(); }
+
 function switchTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
@@ -321,8 +365,10 @@ function switchTab(name, el) {
   document.getElementById('tab-' + name).classList.add('active');
   if(name === 'dashboard') setTimeout(renderTrendChart, 100);
 }
+
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
 function exportExcel() {
   const ws = XLSX.utils.json_to_sheet(inquiries);
   const wb = XLSX.utils.book_new();
