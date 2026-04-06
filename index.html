@@ -263,6 +263,7 @@
         <div class="fg"><label>CAS No.</label><input id="i-casno" type="text" placeholder="예: 67-68-5"></div>
         <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="예: 500mL, 1g, 96well"></div>
         <div class="fg"><label>수량</label><input id="i-qty" type="text" placeholder="수량"></div>
+        <div class="fg form-full"><label>메모</label><textarea id="i-memo" placeholder="견적 요청 시 특이사항이나 메모를 남겨주세요."></textarea></div>
       </div>
       <div id="inq-status" class="status-banner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
@@ -351,7 +352,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ── 전역 변수 초기화 (localStorage 제거됨) ─────────────────────
+// ── 전역 변수 초기화 ──────────────────────────────────────────
 let inquiries = [];
 let notifs = [];
 let nextId = 1;
@@ -378,7 +379,20 @@ db.collection("notifs").onSnapshot((snapshot) => {
 });
 
 // ── Modal ─────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id) { 
+  document.getElementById(id).classList.add('open'); 
+  
+  // 모달 열 때 입력란 초기화 기능 (선택사항)
+  if(id === 'inq-modal') {
+    document.getElementById('i-customer').value = '';
+    document.getElementById('i-partno').value = '';
+    document.getElementById('i-product').value = '';
+    document.getElementById('i-casno').value = '';
+    document.getElementById('i-pkg').value = '';
+    document.getElementById('i-qty').value = '';
+    document.getElementById('i-memo').value = '';
+  }
+}
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   if(document.getElementById('inq-status')) document.getElementById('inq-status').classList.remove('show');
@@ -595,7 +609,7 @@ function nowStr() {
   return new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(/\. /g,'-').replace('.',':').slice(0,-3);
 }
 
-// ── Submit: 견적 문의 등록 ────────────────────────────────────
+// ── Submit: 견적 문의 등록 (메모 추가됨) ──────────────────────
 async function submitInquiry() {
   const rep=document.getElementById('i-rep').value;
   const customer=document.getElementById('i-customer').value.trim();
@@ -610,7 +624,9 @@ async function submitInquiry() {
     casNo: document.getElementById('i-casno').value.trim(),
     pkg: document.getElementById('i-pkg').value.trim(),
     qty: document.getElementById('i-qty').value.trim(),
-    status: '대기중', price: null, supplier: '', delivery: '', memo: '', quoteDate: null
+    status: '대기중', price: null, supplier: '', delivery: '', 
+    memo: document.getElementById('i-memo').value.trim(), // ✅ 추가된 메모 필드 저장
+    quoteDate: null
   };
   
   await db.collection("inquiries").doc(String(inq.id)).set(inq);
@@ -634,6 +650,7 @@ async function submitInquiry() {
       { name: 'CAS No.', value: inq.casNo||'-', inline: true },
       { name: 'Package', value: inq.pkg||'-', inline: true },
       { name: '수량', value: inq.qty||'-', inline: true },
+      { name: '메모', value: inq.memo||'-', inline: false } // ✅ 디스코드 알림에도 메모 포함
     ],
     footer: { text: '어벤션 견적 대시보드' },
     timestamp: new Date().toISOString()
@@ -652,7 +669,10 @@ function openQuoteModal(id) {
   document.getElementById('q-price').value=i.price||'';
   document.getElementById('q-delivery').value=i.delivery||'';
   document.getElementById('q-supplier').value=i.supplier||'';
+  
+  // ✅ 견적 문의 시 작성했던 메모를 이어서 볼 수 있도록 입력창에 표시
   document.getElementById('q-memo').value=i.memo||'';
+  
   openModal('quote-modal');
 }
 
