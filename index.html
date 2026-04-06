@@ -19,14 +19,14 @@
     --text-primary: #1a1a18; --text-secondary: #6b6b67; --text-tertiary: #a0a09a;
     --border: rgba(0,0,0,0.12); --radius-md: 8px; --radius-lg: 12px; --font: 'Pretendard', sans-serif;
   }
-  body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); }
+  body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
 
-  /* 🔒 로그인 화면 전용 스타일 */
+  /* 🔒 로그인 화면 전용 */
   #login-screen { position: fixed; inset: 0; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; z-index: 2000; }
   .login-card { background: white; padding: 2.5rem; border-radius: var(--radius-lg); text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 90%; max-width: 400px; }
   .google-btn { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px; }
 
-  /* 📱 메인 앱 레이아웃 */
+  /* 📱 메인 앱 레이아웃 (Rich UI) */
   #main-app { display: none; max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
   #main-app.show { display: block; }
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
@@ -39,19 +39,19 @@
   .content { padding: 1.5rem; display: none; }
   .content.active { display: block; }
 
-  /* 📊 통계 카드 그리드 */
+  /* 📊 대시보드 통계 카드 */
   .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
-  @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 650px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
   .metric { background: var(--bg-secondary); padding: 1.2rem; border-radius: var(--radius-md); }
   .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; }
   .metric-value { font-size: 22px; font-weight: 600; }
   
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-  @media (max-width: 750px) { .two-col { grid-template-columns: 1fr; } }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
   .card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem; margin-bottom: 1rem; }
   .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
 
-  /* 📋 테이블 스타일 */
+  /* 📋 테이블 및 리스트 */
   .table-wrap { overflow-x: auto; margin-top: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { padding: 10px; background: var(--bg-secondary); text-align: left; font-size: 11px; border-bottom: 1px solid var(--border); }
@@ -67,21 +67,19 @@
   .dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; }
 
   .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; font-size: 12px; background: white; font-weight: 500; transition: 0.2s; }
-  .btn:hover { background: #f5f5f5; }
   .btn-primary { background: #1a1a18; color: white; border-color: #1a1a18; }
-  .btn-sm { padding: 4px 10px; font-size: 11px; }
-
   .badge { padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; }
   .b-wait { background: #FAEEDA; color: #633806; }
   .b-won { background: #EAF3DE; color: #27500A; }
-  .b-lost { background: #FCEBEB; color: #791F1F; }
 
+  /* 🪟 모달 */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; }
   .overlay.open { display: flex; }
-  .modal { background: white; border-radius: var(--radius-lg); width: 100%; max-width: 500px; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
+  .modal { background: white; border-radius: var(--radius-lg); width: 100%; max-width: 520px; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
   .fg { margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px; }
   .fg label { font-size: 12px; font-weight: 600; }
   .fg input, .fg select, .fg textarea { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 13px; }
+  .fg textarea { min-height: 80px; resize: vertical; }
 </style>
 </head>
 <body>
@@ -90,7 +88,7 @@
   <div class="login-card">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="40" style="margin-bottom:15px;">
     <h1>어벤션 견적 관리</h1>
-    <p>사내 전용 시스템입니다.<br>회사 계정으로 로그인해주세요.</p>
+    <p>보안을 위해 회사 계정으로 로그인하세요.</p>
     <button class="google-btn" onclick="loginWithGoogle()">Google 계정으로 로그인</button>
   </div>
 </div>
@@ -154,8 +152,8 @@
 
     <div id="tab-analytics" class="content">
       <div class="two-col">
-        <div class="card"><canvas id="pie-chart" style="height:250px;"></canvas></div>
-        <div class="card"><canvas id="bar-chart" style="height:250px;"></canvas></div>
+        <div class="card"><div class="section-title">결과 분포</div><canvas id="pie-chart" style="height:220px;"></canvas></div>
+        <div class="card"><div class="section-title">담당자별 실적</div><canvas id="bar-chart" style="height:220px;"></canvas></div>
       </div>
     </div>
   </div>
@@ -163,13 +161,13 @@
 
 <div class="overlay" id="inq-modal">
   <div class="modal">
-    <h2 style="margin-bottom:15px;">신규 견적 문의 등록</h2>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <h2 style="margin-bottom:15px; font-size:16px;">신규 견적 문의 등록</h2>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
       <div class="fg"><label>영업담당자</label><select id="i-rep"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
       <div class="fg"><label>고객사</label><input id="i-customer" type="text" placeholder="고객사명"></div>
     </div>
     <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명"></div>
-    <div class="fg"><label>메모 (용량, Cat No 등)</label><textarea id="i-memo" placeholder="상세 정보를 입력하세요."></textarea></div>
+    <div class="fg"><label>메모 (Cat No, 용량 등 상세 정보)</label><textarea id="i-memo" placeholder="구매팀에 전달할 메모를 입력하세요."></textarea></div>
     <div style="text-align:right; margin-top:10px;">
       <button class="btn" onclick="closeModal('inq-modal')">취소</button>
       <button class="btn btn-primary" onclick="submitInquiry()">등록 완료</button>
@@ -178,7 +176,6 @@
 </div>
 
 <script>
-// ── Firebase 설정 ──
 const firebaseConfig = {
   apiKey: "AIzaSyDXolC9bL4pdBAcLTHC2tsEAmKkCilYAVw",
   authDomain: "avention-quote.firebaseapp.com",
@@ -200,7 +197,6 @@ auth.onAuthStateChanged((user) => {
   if (user) {
     const isAvention = user.email.endsWith('@avention.co.kr');
     const isOwner = user.email === 'ink@avention.co.kr';
-
     if (isAvention || isOwner) {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('main-app').classList.add('show');
@@ -219,19 +215,17 @@ auth.onAuthStateChanged((user) => {
 function loginWithGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 function logout() { auth.signOut(); }
 
-// ── 데이터 실시간 연동 ──
 function startSync() {
   db.collection("inquiries").orderBy("id", "desc").onSnapshot(snap => {
     inquiries = snap.docs.map(doc => doc.data());
     renderAll();
   });
-  db.collection("notifs").orderBy("id", "desc").limit(10).onSnapshot(snap => {
+  db.collection("notifs").orderBy("id", "desc").limit(8).onSnapshot(snap => {
     notifs = snap.docs.map(doc => doc.data());
     renderNotifs();
   });
 }
 
-// ── 렌더링 로직 ──
 function renderAll() {
   renderMetrics();
   renderRepStats();
@@ -245,7 +239,6 @@ function renderMetrics() {
   const won = inquiries.filter(i => i.status === '수주').length;
   const pending = inquiries.filter(i => i.status === '대기중').length;
   const rate = total > 0 ? Math.round(won / total * 100) : 0;
-
   document.getElementById('metrics-grid').innerHTML = `
     <div class="metric"><div class="metric-label">전체 견적</div><div class="metric-value">${total}건</div></div>
     <div class="metric"><div class="metric-label">수주율</div><div class="metric-value" style="color:#1D9E75">${rate}%</div></div>
@@ -256,32 +249,25 @@ function renderMetrics() {
 
 function renderRepStats() {
   const reps = ['BML','LSB','POL','YSJ'];
-  let html = '';
-  reps.forEach(name => {
+  document.getElementById('rep-stats').innerHTML = reps.map(name => {
     const mine = inquiries.filter(i => i.rep === name);
     const won = mine.filter(i => i.status === '수주').length;
     const rate = mine.length > 0 ? Math.round(won / mine.length * 100) : 0;
-    html += `
+    return `
       <div class="rep-row">
         <div class="avatar">${name[0]}</div>
         <div style="flex:1;">
-          <div style="display:flex; justify-content:space-between; font-size:12px;">
-            <span><strong>${name}</strong></span>
-            <span style="color:var(--text-secondary);">${rate}%</span>
-          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px;"><span><strong>${name}</strong></span><span>${rate}%</span></div>
           <div class="prog-bar"><div class="prog-fill" style="width:${rate}%"></div></div>
         </div>
       </div>`;
-  });
-  document.getElementById('rep-stats').innerHTML = html;
+  }).join('');
 }
 
 function renderRecent() {
   document.getElementById('recent-list').innerHTML = inquiries.slice(0, 5).map(i => `
-    <div class="notif-item">
-      <span class="badge ${i.status==='대기중'?'b-wait':''}">${i.status}</span>
-      <span style="font-size:12px;"><strong>${i.customer}</strong> - ${i.product}</span>
-    </div>
+    <div class="notif-item"><span class="badge ${i.status==='대기중'?'b-wait':''}">${i.status}</span>
+    <span style="font-size:12px;"><strong>${i.customer}</strong> - ${i.product}</span></div>
   `).join('');
 }
 
@@ -289,30 +275,19 @@ function renderTable() {
   const rf = document.getElementById('f-rep').value;
   const sf = document.getElementById('f-status').value;
   const filtered = inquiries.filter(i => (!rf || i.rep === rf) && (!sf || i.status === sf));
-
   document.getElementById('inq-tbody').innerHTML = filtered.map(i => `
-    <tr>
-      <td style="font-size:11px; color:#888;">${i.date}</td>
-      <td>${i.rep}</td>
-      <td><strong>${i.customer}</strong></td>
-      <td>${i.product}</td>
-      <td>${i.price ? '₩'+(i.price/10000).toFixed(0)+'만' : '-'}</td>
-      <td><span class="badge ${i.status==='대기중'?'b-wait': i.status==='수주'?'b-won':'b-quoted'}">${i.status}</span></td>
-      <td><button class="btn btn-sm" onclick="deleteInq(${i.id})" style="color:red; border:none;">삭제</button></td>
-    </tr>
+    <tr><td style="color:#888;">${i.date}</td><td>${i.rep}</td><td><strong>${i.customer}</strong></td><td>${i.product}</td>
+    <td>${i.price ? '₩'+(i.price/10000).toFixed(0)+'만' : '-'}</td><td><span class="badge ${i.status==='대기중'?'b-wait': i.status==='수주'?'b-won':'b-quoted'}">${i.status}</span></td>
+    <td><button class="btn btn-sm" onclick="deleteInq(${i.id})" style="color:red; border:none;">삭제</button></td></tr>
   `).join('');
-  
-  const pendingCount = inquiries.filter(i => i.status === '대기중').length;
-  document.getElementById('pending-dot').innerHTML = pendingCount > 0 ? `<span class="dot"></span>` : '';
+  const pc = inquiries.filter(i => i.status === '대기중').length;
+  document.getElementById('pending-dot').innerHTML = pc > 0 ? `<span class="dot"></span>` : '';
 }
 
 function renderNotifs() {
   document.getElementById('notif-list').innerHTML = notifs.map(n => `
-    <div class="notif-item">
-      <div class="dot"></div>
-      <div style="font-size:12px;">${n.text} <span style="color:#aaa; font-size:10px; margin-left:8px;">${n.time}</span></div>
-    </div>
-  `).join('') || '<div style="padding:20px; text-align:center; color:#ccc;">알림이 없습니다.</div>';
+    <div class="notif-item"><div class="dot"></div><div style="font-size:12px;">${n.text} <span style="color:#aaa; font-size:10px;">${n.time}</span></div></div>
+  `).join('') || '<div style="padding:20px; text-align:center;">알림이 없습니다.</div>';
 }
 
 function renderTrendChart() {
@@ -320,34 +295,25 @@ function renderTrendChart() {
   const ctx = document.getElementById('trend-chart').getContext('2d');
   charts.trend = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels: ['1월','2월','3월','4월'],
-      datasets: [{ label: '수주율', data: [45, 52, 48, 60], borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)', fill: true, tension: 0.4 }]
-    },
+    data: { labels: ['1월','2월','3월','4월'], datasets: [{ label: '수주율', data: [45, 52, 48, 60], borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)', fill: true, tension: 0.4 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
 
-// ── 기능 함수 ──
 async function submitInquiry() {
   const inq = {
     id: Date.now(), date: new Date().toISOString().slice(0,10),
-    rep: document.getElementById('i-rep').value,
-    customer: document.getElementById('i-customer').value.trim(),
-    product: document.getElementById('i-product').value.trim(),
-    memo: document.getElementById('i-memo').value.trim(),
+    rep: document.getElementById('i-rep').value, customer: document.getElementById('i-customer').value.trim(),
+    product: document.getElementById('i-product').value.trim(), memo: document.getElementById('i-memo').value.trim(),
     status: '대기중', price: null
   };
-  if(!inq.customer || !inq.product) return alert("내용을 입력하세요.");
+  if(!inq.customer || !inq.product) return alert("필수 정보를 입력하세요.");
   await db.collection("inquiries").doc(String(inq.id)).set(inq);
   await db.collection("notifs").add({ id: Date.now(), text: `${inq.rep}님이 ${inq.customer} 견적 문의 등록`, time: '방금 전' });
   closeModal('inq-modal');
 }
 
-async function deleteInq(id) {
-  if(confirm("정말 삭제할까요?")) await db.collection("inquiries").doc(String(id)).delete();
-}
-
+async function deleteInq(id) { if(confirm("삭제할까요?")) await db.collection("inquiries").doc(String(id)).delete(); }
 function switchTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
@@ -355,10 +321,8 @@ function switchTab(name, el) {
   document.getElementById('tab-' + name).classList.add('active');
   if(name === 'dashboard') setTimeout(renderTrendChart, 100);
 }
-
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
 function exportExcel() {
   const ws = XLSX.utils.json_to_sheet(inquiries);
   const wb = XLSX.utils.book_new();
