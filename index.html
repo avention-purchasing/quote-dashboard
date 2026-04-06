@@ -436,39 +436,25 @@ function renderTable() {
     </tr>`).join('');
 }
 
-// 🛡️ 소유님 전용 알림 렌더링 (삭제 버튼 활성화 로직 강화)
+// 🛡️ [소유님 요청] 관리자 전용 알림 삭제 로직
 function renderNotifs() {
   const el = document.getElementById('notif-list');
   if (!notifs.length) { el.innerHTML = '<div class="empty">알림 없음</div>'; return; }
 
-  // 🔒 현재 로그인한 이메일을 소문자로 변환하여 소유님 계정인지 정확히 확인
-  const currentUserEmail = (auth.currentUser && auth.currentUser.email) ? auth.currentUser.email.toLowerCase().trim() : "";
-  const isMaster = currentUserEmail === 'ink@avention.co.kr';
+  const isMaster = auth.currentUser && auth.currentUser.email === 'ink@avention.co.kr';
 
   el.innerHTML = notifs.map(n => `
-    <div class="notif-item ${n.unread ? 'unread' : ''}" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="notif-item ${n.unread?'unread':''}" style="display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <div class="notif-text">
-          ${n.unread ? '<span class="dot"></span>' : '<span style="width:6px;display:inline-block;"></span>'}
-          <span>${n.text}</span><span class="noti-badge">알림</span>
-        </div>
+        <div class="notif-text">${n.unread?'<span class="dot"></span>':''}<span>${n.text}</span></div>
         <div class="notif-time">${n.time}</div>
       </div>
-      ${isMaster ? `
-        <button class="btn btn-sm" 
-                style="color:#E24B4A; border:1px solid #F09595; background:none; font-weight:600; cursor:pointer; margin-left:10px;" 
-                onclick="deleteNotif('${n.docId}')">삭제</button>` : ''}
+      ${isMaster ? `<button class="btn btn-sm" style="color:red; border:none;" onclick="deleteNotif('${n.docId}')">삭제</button>` : ''}
     </div>`).join('');
 }
 
-// 🗑️ 알림 삭제 기능
 async function deleteNotif(docId) {
-  if (!confirm("이 알림 기록을 삭제하시겠습니까?")) return;
-  try {
-    await db.collection('notifs').doc(docId).delete();
-  } catch (e) {
-    alert("삭제 권한이 없거나 오류가 발생했습니다: " + e.message);
-  }
+  if(confirm("알림을 삭제할까요?")) await db.collection("notifs").doc(docId).delete();
 }
 
 // ── 유틸리티 ──
