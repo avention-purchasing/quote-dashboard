@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>견적 수주율 관리 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeece6;
+    --bg-info: #e6f1fb;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b67;
+    --text-tertiary: #a0a09a;
+    --text-info: #0c447c;
+    --border: rgba(0,0,0,0.12);
+    --border-hover: rgba(0,0,0,0.25);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1c1c1a;
+      --bg-secondary: #252523;
+      --bg-tertiary: #2e2e2b;
+      --bg-info: #0c2440;
+      --text-primary: #f0ede6;
+      --text-secondary: #a0a09a;
+      --text-tertiary: #6b6b67;
+      --text-info: #85b7eb;
+      --border: rgba(255,255,255,0.12);
+      --border-hover: rgba(255,255,255,0.25);
+    }
+  }
+
+  body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
+  .app { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+  .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
+
+  /* Header */
+  .header { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .header-left h1 { font-size: 17px; font-weight: 600; }
+  .header-left p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 0; padding: 0 1.5rem; border-bottom: 0.5px solid var(--border); overflow-x: auto; }
+  .tab { padding: 12px 16px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-secondary); white-space: nowrap; transition: all 0.15s; }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 500; }
+  .tab:hover:not(.active) { color: var(--text-primary); }
+
+  /* Content */
+  .content { padding: 1.5rem; display: none; }
+  .content.active { display: block; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .metric { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 1rem; }
+  .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; }
+  .metric-value { font-size: 22px; font-weight: 600; }
+  .metric-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+  .green { color: #3B6D11; } .amber { color: #854F0B; }
+  @media (prefers-color-scheme: dark) { .green { color: #97C459; } .amber { color: #EF9F27; } }
+
+  /* Two-col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; }
+  .card-pad { padding: 1rem; }
+  .section-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text-secondary); border-bottom: 0.5px solid var(--border); background: var(--bg-secondary); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-secondary); }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .b-wait { background: #FAEEDA; color: #633806; }
+  .b-quoted { background: #E6F1FB; color: #0C447C; }
+  .b-won { background: #EAF3DE; color: #27500A; }
+  .b-lost { background: #FCEBEB; color: #791F1F; }
+
+  /* Buttons */
+  .btn { padding: 7px 14px; border: 0.5px solid var(--border-hover); border-radius: var(--radius-md); background: transparent; cursor: pointer; font-size: 12px; color: var(--text-primary); font-family: var(--font); transition: background 0.15s; }
+  .btn:hover { background: var(--bg-secondary); }
+  .btn-primary { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn-row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* Notification dot */
+  .dot { width: 6px; height: 6px; background: #E24B4A; border-radius: 50%; display: inline-block; margin-left: 5px; vertical-align: middle; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; align-items: center; justify-content: center; padding: 1rem; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+  .modal-head { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-head h2 { font-size: 15px; font-weight: 500; }
+  .modal-body { padding: 1.25rem 1.5rem; }
+  .modal-foot { padding: 1rem 1.5rem; border-top: 0.5px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .x-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-secondary); line-height: 1; }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .form-full { grid-column: 1 / -1; }
+  .fg { display: flex; flex-direction: column; gap: 5px; }
+  .fg label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+  .fg input, .fg select, .fg textarea {
+    border: 0.5px solid var(--border); border-radius: var(--radius-md);
+    padding: 8px 10px; font-size: 13px; font-family: var(--font);
+    background: var(--bg-primary); color: var(--text-primary);
+  }
+  .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--border-hover); }
+  .fg textarea { resize: vertical; min-height: 65px; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-bar select { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); }
+
+  /* Status banner */
+  .status-banner { background: var(--bg-info); border: 0.5px solid #b5d4f4; border-radius: var(--radius-md); padding: 9px 12px; font-size: 12px; color: var(--text-info); margin-top: 10px; display: none; align-items: center; gap: 7px; }
+  .status-banner.show { display: flex; }
+
+  /* Rep rows */
+  .rep-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+  .rep-row:last-child { border-bottom: none; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .av-b { background: #B5D4F4; color: #0C447C; }
+  .av-t { background: #9FE1CB; color: #085041; }
+  .av-c { background: #F5C4B3; color: #712B13; }
+  .av-p { background: #CECBF6; color: #3C3489; }
+  .rep-name { font-size: 13px; font-weight: 500; min-width: 50px; }
+  .rep-meta { font-size: 11px; color: var(--text-secondary); flex: 1; display: flex; gap: 12px; }
+  .rep-meta b { color: var(--text-primary); }
+  .rate-wrap { min-width: 70px; text-align: right; }
+  .rate-num { font-size: 13px; font-weight: 600; }
+  .prog { width: 100%; height: 5px; background: var(--bg-secondary); border-radius: 3px; margin-top: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 3px; background: #639922; }
+
+  /* Recent list */
+  .recent-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 0.5px solid var(--border); font-size: 12px; }
+  .recent-item:last-child { border-bottom: none; }
+
+  /* Notification */
+  .notif-item { padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item.unread { background: var(--bg-info); }
+  .notif-text { font-size: 13px; display: flex; align-items: center; gap: 7px; }
+  .notif-time { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; padding-left: 13px; }
+
+  /* Gmail badge */
+  .gmail-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 10px; font-size: 10px; background: #FAECE7; color: #712B13; }
+
+  /* Empty */
+  .empty { padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 13px; }
+
+  /* Info box */
+  .info-box { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 9px 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+
+  /* Chart wrap */
+  .chart-wrap { position: relative; width: 100%; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="shell">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1>견적 수주율 관리 대시보드</h1>
+        <p>어벤션 견적 관리</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="pending-notif" style="display:none;font-size:12px;color:#854F0B;background:#FAEEDA;padding:5px 10px;border-radius:20px;"></span>
+        <button class="btn btn-primary" onclick="openModal('inq-modal')">+ 견적 문의 등록</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('dashboard',this)">대시보드</div>
+      <div class="tab" onclick="switchTab('inquiries',this)">견적 목록 <span id="pending-dot"></span></div>
+      <div class="tab" onclick="switchTab('notifications',this)">알림 <span id="notif-dot"></span></div>
+      <div class="tab" onclick="switchTab('analytics',this)">분석</div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="tab-dashboard" class="content active">
+      <div class="metrics" id="metrics"></div>
+      <div class="two-col">
+        <div>
+          <div class="section-title">영업담당자별 수주율</div>
+          <div class="card card-pad" id="rep-stats"></div>
+        </div>
+        <div>
+          <div class="section-title">최근 견적 현황</div>
+          <div class="card" id="recent-list"></div>
+        </div>
+      </div>
+      <div class="section-title" style="margin-top:1rem;">월별 수주율 추이</div>
+      <div class="card card-pad">
+        <div class="chart-wrap" style="height:200px;"><canvas id="trend-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Inquiries -->
+    <div id="tab-inquiries" class="content">
+      <div class="filter-bar">
+        <select id="f-rep" onchange="renderTable()"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
+        <select id="f-status" onchange="renderTable()"><option value="">전체 상태</option><option>대기중</option><option>견적완료</option><option>수주</option><option>미수주</option></select>
+        <span style="flex:1;"></span>
+        <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
+      </div>
+      <div class="card table-wrap">
+        <table>
+          <thead><tr>
+            <th>문의일</th><th>담당자</th><th>고객사</th><th>Cat No.</th><th>제품명</th><th>CAS No.</th><th>Package</th><th>수량</th><th>금액</th><th>상태</th><th>액션</th>
+          </tr></thead>
+          <tbody id="inq-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="tab-notifications" class="content">
+      <div class="section-title">알림 내역</div>
+      <div class="card" id="notif-list"></div>
+    </div>
+
+    <!-- Analytics -->
+    <div id="tab-analytics" class="content">
+      <div class="two-col">
+        <div>
+          <div class="section-title">담당자별 수주 건수</div>
+          <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="rep-chart"></canvas></div></div>
+        </div>
+        <div>
+          <div class="section-title">전체 결과 현황</div>
+          <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="result-chart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="section-title">담당자별 수주율 비교</div>
+      <div class="card card-pad"><div class="chart-wrap" style="height:200px;"><canvas id="rate-chart"></canvas></div></div>
+    </div>
+
+  </div><!-- shell -->
+</div><!-- app -->
+
+<!-- 견적 문의 등록 Modal -->
+<div class="overlay" id="inq-modal">
+  <div class="modal">
+    <div class="modal-head"><h2>신규 견적 문의 등록</h2><button class="x-btn" onclick="closeModal('inq-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="fg"><label>영업담당자</label><select id="i-rep"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
+        <div class="fg"><label>고객사</label><input id="i-customer" type="text" placeholder="고객사명"></div>
+        <div class="fg"><label>Cat No.</label><input id="i-partno" type="text" placeholder="예: G7513"></div>
+        <div class="fg"><label>제품명</label><input id="i-product" type="text" placeholder="제품명"></div>
+        <div class="fg"><label>CAS No.</label><input id="i-casno" type="text" placeholder="예: 67-68-5"></div>
+        <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="예: 500mL, 1g, 96well"></div>
+        <div class="fg"><label>수량</label><input id="i-qty" type="text" placeholder="수량"></div>
+      </div>
+      <div id="inq-status" class="status-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
+        <span id="inq-status-text"></span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('inq-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitInquiry()">등록 + 구매담당자 알림</button>
+    </div>
+  </div>
+</div>
+
+<!-- 견적 입력 Modal -->
+<div class="overlay" id="quote-modal">
+  <div class="modal">
+    <div class="modal-head"><h2>견적 입력</h2><button class="x-btn" onclick="closeModal('quote-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="info-box" id="quote-info"></div>
+      <div class="form-grid">
+        <div class="fg"><label>견적 금액 (원)</label><input id="q-price" type="number" placeholder="0"></div>
+        <div class="fg"><label>납기 가능일</label><input id="q-delivery" type="date"></div>
+        <div class="fg form-full"><label>공급사</label><input id="q-supplier" type="text" placeholder="공급사명"></div>
+        <div class="fg form-full"><label>메모</label><textarea id="q-memo" placeholder="특이사항"></textarea></div>
+      </div>
+      <div id="quote-status" class="status-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
+        <span id="quote-status-text"></span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('quote-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitQuote()">견적 저장 + 영업팀 알림</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수주 여부 변경 Modal -->
+<div class="overlay" id="result-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-head"><h2>수주 여부 업데이트</h2><button class="x-btn" onclick="closeModal('result-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="info-box" id="result-info"></div>
+      <div class="fg" style="margin-top:12px;">
+        <label>수주 결과</label>
+        <select id="r-result">
+          <option value="수주">수주</option>
+          <option value="미수주">미수주</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:12px;">
+        <label>메모 (선택)</label>
+        <textarea id="r-memo" placeholder="미수주 사유 등"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('result-modal')">취소</button>
+      <button class="btn btn-primary" onclick="submitResult()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 설정 (이메일 주소 수정 가능) ──────────────────────────────
+const CONFIG = {
+  buyerEmail: 'ink@avention.co.kr',
+  repEmails: { 'BML': 'avention@avention.co.kr', 'LSB': 'seungbin@avention.co.kr', 'POL': 'seungbin@avention.co.kr', 'YSJ': 'bio@avention.co.kr' },
+  discordBuyer: 'https://discord.com/api/webhooks/1490536970223353947/fzC0wssKrg5FDqkURsh-PUpK7xfJzWNAcDyiFSxsczbQSYCLJGhSewbjeMf0lofc3iLc',
+  discordRep:   'https://discord.com/api/webhooks/1490537189795303435/IZH8O3AXoP9vSE3EJc6sNJmM-MMWVjcUL32ufess1JfoX2w1JW9zrN8dv71TWsL-drQa',
+  sheetsUrl: 'https://script.google.com/macros/s/AKfycbzUX87JH06siBmOZ4ajXAxPh7y9DnPd23AN5CMaQe7if6kZywQy4p7OlINSoaihBr-Y/exec',
+  useApiNotify: false
+};
+
+const STATUS_BADGE = { '대기중':'b-wait', '견적완료':'b-quoted', '수주':'b-won', '미수주':'b-lost' };
+const AV = ['av-b','av-t','av-c','av-p'];
+
+// ── 초기 데이터 ───────────────────────────────────────────────
+const DEFAULT_DATA = [
+  {id:1,date:"2025-02-15",rep:"BML",customer:"유한양행",partNo:"G7513",product:"MTT Assay Kit",casNo:"298-93-1",pkg:"10kit",qty:"2",status:"수주",price:980000,supplier:"Sigma-Aldrich",delivery:"2025-02-26",memo:"",quoteDate:"2025-02-17"},
+  {id:2,date:"2025-02-20",rep:"LSB",customer:"SK바이오팜",partNo:"P2153",product:"PLGA Microsphere",casNo:"26780-50-7",pkg:"1g",qty:"3",status:"수주",price:5500000,supplier:"Polysciences",delivery:"2025-03-06",memo:"",quoteDate:"2025-02-22"},
+  {id:3,date:"2025-03-10",rep:"BML",customer:"한국바이오텍",partNo:"P5493",product:"PBS Buffer 1L",casNo:"7558-79-4",pkg:"1L",qty:"50",status:"수주",price:1250000,supplier:"Sigma-Aldrich",delivery:"2025-03-22",memo:"",quoteDate:"2025-03-12"},
+  {id:4,date:"2025-03-14",rep:"LSB",customer:"셀트리온",partNo:"N7009",product:"Nanoparticle 100nm",casNo:"-",pkg:"200mg",qty:"2",status:"수주",price:3800000,supplier:"Nanocomposix",delivery:"2025-03-28",memo:"",quoteDate:"2025-03-16"},
+  {id:5,date:"2025-03-18",rep:"POL",customer:"카이스트 생명공학부",partNo:"D2650",product:"DMSO 500mL",casNo:"67-68-5",pkg:"500mL",qty:"10",status:"미수주",price:450000,supplier:"Dako Korea",delivery:"2025-04-03",memo:"경쟁사 단가 낮음",quoteDate:"2025-03-20"},
+  {id:6,date:"2025-03-22",rep:"YSJ",customer:"삼성바이오로직스",partNo:"M1136",product:"Microbead 10μm",casNo:"-",pkg:"500mL",qty:"1",status:"견적완료",price:2100000,supplier:"Merck",delivery:"2025-04-08",memo:"",quoteDate:"2025-03-24"},
+  {id:7,date:"2025-03-28",rep:"LSB",customer:"녹십자",partNo:"E4127",product:"ELISA Kit (IL-6)",casNo:"-",pkg:"96well",qty:"5",status:"대기중",price:null,supplier:"",delivery:"",memo:"",quoteDate:null},
+  {id:8,date:"2025-04-01",rep:"POL",customer:"LG화학 연구소",partNo:"F3021",product:"Fluorescent Probe Set",casNo:"-",pkg:"1 set",qty:"1",status:"대기중",price:null,supplier:"",delivery:"",memo:"",quoteDate:null},
+];
+const DEFAULT_NOTIFS = [
+  {id:1,type:"inquiry",text:"LSB → 구매: 녹십자 ELISA Kit 견적 문의",time:"2025-03-28 09:15",unread:true},
+  {id:2,type:"inquiry",text:"POL → 구매: LG화학 형광 프로브 견적 문의",time:"2025-04-01 14:30",unread:true},
+  {id:3,type:"quote",text:"구매 → YSJ: 삼성바이오로직스 Microbead 견적 완료",time:"2025-03-24 11:00",unread:false},
+];
+
+let inquiries = JSON.parse(localStorage.getItem('qs_inquiries')) || JSON.parse(JSON.stringify(DEFAULT_DATA));
+let notifs    = JSON.parse(localStorage.getItem('qs_notifs'))    || JSON.parse(JSON.stringify(DEFAULT_NOTIFS));
+let nextId    = Math.max(...inquiries.map(i=>i.id), 0) + 1;
+let quoteTarget = null;
+const charts  = {};
+
+function save() {
+  localStorage.setItem('qs_inquiries', JSON.stringify(inquiries));
+  localStorage.setItem('qs_notifs', JSON.stringify(notifs));
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if(document.getElementById('inq-status')) document.getElementById('inq-status').classList.remove('show');
+  if(document.getElementById('quote-status')) document.getElementById('quote-status').classList.remove('show');
+}
+
+// ── Tab ───────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='inquiries') renderTable();
+  if(name==='notifications') { notifs.forEach(n=>n.unread=false); save(); renderNotifs(); updateBadges(); }
+  if(name==='analytics') setTimeout(renderAnalytics, 60);
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+function getStats() {
+  const won = inquiries.filter(i=>i.status==='수주').length;
+  const lost = inquiries.filter(i=>i.status==='미수주').length;
+  const pending = inquiries.filter(i=>i.status==='대기중').length;
+  const decided = won + lost;
+  const rate = decided > 0 ? Math.round(won/decided*100) : 0;
+  const totalAmt = inquiries.filter(i=>i.status==='수주'&&i.price).reduce((s,i)=>s+i.price,0);
+  return { total:inquiries.length, won, lost, pending, decided, rate, totalAmt };
+}
+
+// ── Render: Dashboard ─────────────────────────────────────────
+function renderMetrics() {
+  const s = getStats();
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">전체 견적 문의</div><div class="metric-value">${s.total}건</div><div class="metric-sub">누적</div></div>
+    <div class="metric"><div class="metric-label">수주율</div><div class="metric-value green">${s.rate}%</div><div class="metric-sub">수주 ${s.won} / 결정 ${s.decided}건</div></div>
+    <div class="metric"><div class="metric-label">대기중 (미견적)</div><div class="metric-value amber">${s.pending}건</div><div class="metric-sub">견적 입력 필요</div></div>
+    <div class="metric"><div class="metric-label">수주 총액</div><div class="metric-value">${(s.totalAmt/1000000).toFixed(1)}M원</div><div class="metric-sub">누적</div></div>
+  `;
+}
+
+function renderRepStats() {
+  const reps = ['BML','LSB','POL','YSJ'];
+  let html = '';
+  reps.forEach((rep,i)=>{
+    const mine = inquiries.filter(x=>x.rep===rep);
+    const won = mine.filter(x=>x.status==='수주').length;
+    const decided = won + mine.filter(x=>x.status==='미수주').length;
+    const rate = decided>0?Math.round(won/decided*100):0;
+    const initials = rep[0]+rep[rep.length-1];
+    html += `<div class="rep-row">
+      <div class="avatar ${AV[i]}">${initials}</div>
+      <div class="rep-name">${rep}</div>
+      <div class="rep-meta"><span>문의 <b>${mine.length}</b></span><span>수주 <b>${won}</b></span><span>미수주 <b>${mine.filter(x=>x.status==='미수주').length}</b></span></div>
+      <div class="rate-wrap">
+        <div class="rate-num">${rate}%</div>
+        <div class="prog"><div class="prog-fill" style="width:${rate}%"></div></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('rep-stats').innerHTML = html;
+}
+
+function renderRecent() {
+  const list = [...inquiries].sort((a,b)=>b.id-a.id).slice(0,6);
+  document.getElementById('recent-list').innerHTML = list.map(i=>`
+    <div class="recent-item">
+      <span class="badge ${STATUS_BADGE[i.status]||'b-wait'}">${i.status}</span>
+      <span style="color:var(--text-secondary);min-width:35px;">${i.rep}</span>
+      <span style="font-weight:500;flex:1;">${i.customer}</span>
+      <span style="color:var(--text-secondary);font-size:11px;">${i.product.length>10?i.product.slice(0,10)+'…':i.product}</span>
+    </div>`).join('');
+}
+
+function renderTrend() {
+  if(charts['trend']) charts['trend'].destroy();
+  const months=['1월','2월','3월','4월'];
+  const data=months.map((_,mi)=>{
+    const mo=String(mi+1).padStart(2,'0');
+    const dec=inquiries.filter(i=>i.quoteDate&&i.quoteDate.includes(`2025-${mo}`)&&['수주','미수주'].includes(i.status));
+    const w=dec.filter(i=>i.status==='수주').length;
+    return dec.length>0?Math.round(w/dec.length*100):null;
+  });
+  charts['trend']=new Chart(document.getElementById('trend-chart'),{
+    type:'line',
+    data:{labels:months,datasets:[{label:'수주율',data,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#1D9E75',spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+  });
+}
+
+// ── Render: Table ─────────────────────────────────────────────
+function renderTable() {
+  const r=document.getElementById('f-rep').value;
+  const s=document.getElementById('f-status').value;
+  const list=inquiries.filter(i=>{
+    if(r&&i.rep!==r)return false;
+    if(s&&i.status!==s)return false;
+    return true;
+  }).sort((a,b)=>b.id-a.id);
+  document.getElementById('table-count').textContent=`총 ${list.length}건`;
+  document.getElementById('inq-tbody').innerHTML = list.length ? list.map(i=>`
+    <tr>
+      <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${i.date}</td>
+      <td>${i.rep}</td>
+      <td style="font-weight:500;">${i.customer}</td>
+      <td style="font-size:11px;">${i.partNo||'-'}</td>
+      <td style="font-size:12px;">${i.product.length>12?i.product.slice(0,12)+'…':i.product}</td>
+      <td style="font-size:11px;color:var(--text-secondary);">${i.casNo||'-'}</td>
+      <td style="font-size:11px;">${i.pkg||'-'}</td>
+      <td style="font-size:12px;">${i.qty||'-'}</td>
+      <td style="font-size:12px;">${i.price?'₩'+(i.price/10000).toFixed(0)+'만':'-'}</td>
+      <td><span class="badge ${STATUS_BADGE[i.status]||'b-wait'}">${i.status}</span></td>
+      <td style="display:flex;gap:5px;">
+        ${i.status==='대기중'
+          ?`<button class="btn btn-sm btn-primary" onclick="openQuoteModal(${i.id})">견적입력</button>`
+          :`<button class="btn btn-sm" onclick="openQuoteModal(${i.id})">견적수정</button>`}
+        ${i.status==='견적완료'
+          ?`<button class="btn btn-sm" style="color:#27500A;border-color:#C0DD97;" onclick="openResultModal(${i.id})">수주확정</button>`
+          :''}
+        <button class="btn btn-sm" style="color:#E24B4A;border-color:#F09595;" onclick="deleteInquiry(${i.id})">삭제</button>
+      </td>
+    </tr>`).join('')
+    : '<tr><td colspan="11" class="empty">해당하는 항목 없음</td></tr>';
+}
+
+// ── Render: Notifications ─────────────────────────────────────
+function renderNotifs() {
+  const el=document.getElementById('notif-list');
+  if(!notifs.length){el.innerHTML='<div class="empty">알림 없음</div>';return;}
+  el.innerHTML=[...notifs].reverse().map(n=>`
+    <div class="notif-item${n.unread?' unread':''}">
+      <div class="notif-text">
+        ${n.unread?`<span class="dot"></span>`:'<span style="width:6px;display:inline-block;"></span>'}
+        <span>${n.text}</span>
+        <span class="gmail-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
+          알림
+        </span>
+      </div>
+      <div class="notif-time">${n.time}</div>
+    </div>`).join('');
+}
+
+function updateBadges() {
+  const pending=inquiries.filter(i=>i.status==='대기중').length;
+  const unread=notifs.filter(n=>n.unread).length;
+  document.getElementById('pending-dot').innerHTML=pending>0?`<span class="dot"></span>`:'';
+  document.getElementById('notif-dot').innerHTML=unread>0?`<span class="dot"></span>`:'';
+  const pn=document.getElementById('pending-notif');
+  if(pending>0){pn.style.display='inline-block';pn.textContent=`미처리 ${pending}건`;}
+  else pn.style.display='none';
+}
+
+// ── Render: Analytics ────────────────────────────────────────
+function renderAnalytics() {
+  ['rep-chart','result-chart','rate-chart'].forEach(id=>{if(charts[id])charts[id].destroy();});
+  const reps=['BML','LSB','POL','YSJ'];
+  charts['rep-chart']=new Chart(document.getElementById('rep-chart'),{
+    type:'doughnut',
+    data:{labels:reps,datasets:[{data:reps.map(r=>inquiries.filter(i=>i.rep===r&&i.status==='수주').length),backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+  const won=inquiries.filter(i=>i.status==='수주').length;
+  const lost=inquiries.filter(i=>i.status==='미수주').length;
+  const quoted=inquiries.filter(i=>i.status==='견적완료').length;
+  const wait=inquiries.filter(i=>i.status==='대기중').length;
+  charts['result-chart']=new Chart(document.getElementById('result-chart'),{
+    type:'bar',
+    data:{labels:['수주','미수주','견적완료','대기중'],datasets:[{data:[won,lost,quoted,wait],backgroundColor:['#639922','#E24B4A','#378ADD','#BA7517']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+  const rates=reps.map(r=>{
+    const dec=inquiries.filter(i=>i.rep===r&&['수주','미수주'].includes(i.status));
+    const w=inquiries.filter(i=>i.rep===r&&i.status==='수주').length;
+    return dec.length>0?Math.round(w/dec.length*100):0;
+  });
+  charts['rate-chart']=new Chart(document.getElementById('rate-chart'),{
+    type:'bar',
+    data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+  });
+}
+
+// ── Discord 웹훅 발송 ─────────────────────────────────────────
+async function sendDiscord(webhookUrl, embed) {
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+  } catch(e) { console.error('Discord 알림 실패:', e); }
+}
+
+// ── 구글 시트 동기화 ──────────────────────────────────────────
+async function syncToSheet(inq) {
+  try {
+    await fetch(CONFIG.sheetsUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inq)
+    });
+  } catch(e) { console.error('구글 시트 동기화 실패:', e); }
+}
+
+// ── Submit: 견적 문의 등록 ────────────────────────────────────
+async function submitInquiry() {
+  const rep=document.getElementById('i-rep').value;
+  const customer=document.getElementById('i-customer').value.trim();
+  const product=document.getElementById('i-product').value.trim();
+  if(!customer||!product){alert('고객사와 제품명을 입력해주세요.');return;}
+
+  const inq={
+    id:nextId++, date:new Date().toISOString().slice(0,10),
+    rep, customer,
+    partNo:document.getElementById('i-partno').value.trim(),
+    product,
+    casNo:document.getElementById('i-casno').value.trim(),
+    pkg:document.getElementById('i-pkg').value.trim(),
+    qty:document.getElementById('i-qty').value.trim(),
+    status:'대기중', price:null, supplier:'', delivery:'', memo:'', quoteDate:null
+  };
+  inquiries.push(inq);
+  notifs.push({id:notifs.length+1,type:'inquiry',text:`${rep} → 구매: ${customer} ${product} 견적 문의`,time:nowStr(),unread:true});
+
+  const sb=document.getElementById('inq-status');
+  const st=document.getElementById('inq-status-text');
+  sb.classList.add('show');
+  st.textContent='디스코드 알림 전송 중...';
+
+  await sendDiscord(CONFIG.discordBuyer, {
+    title: '📋 새 견적 문의가 등록됐습니다',
+    color: 0xBA7517,
+    fields: [
+      { name: '영업담당자', value: rep, inline: true },
+      { name: '고객사', value: customer, inline: true },
+      { name: '제품명', value: product, inline: false },
+      { name: 'Cat No.', value: inq.partNo||'-', inline: true },
+      { name: 'CAS No.', value: inq.casNo||'-', inline: true },
+      { name: 'Package', value: inq.pkg||'-', inline: true },
+      { name: '수량', value: inq.qty||'-', inline: true },
+    ],
+    footer: { text: '어벤션 견적 대시보드' },
+    timestamp: new Date().toISOString()
+  });
+
+  st.textContent='디스코드 알림 전송 완료!';
+  await syncToSheet(inq);
+  save(); renderAll();
+  setTimeout(()=>closeModal('inq-modal'), 1600);
+}
+
+// ── Open Quote Modal ──────────────────────────────────────────
+function openQuoteModal(id) {
+  quoteTarget=id;
+  const i=inquiries.find(x=>x.id===id); if(!i) return;
+  document.getElementById('quote-info').textContent=`${i.rep} · ${i.customer} · ${i.product} · Cat No.: ${i.partNo||'-'} · CAS: ${i.casNo||'-'} · ${i.pkg||''} × ${i.qty||''}`;
+  document.getElementById('q-price').value=i.price||'';
+  document.getElementById('q-delivery').value=i.delivery||'';
+  document.getElementById('q-supplier').value=i.supplier||'';
+  document.getElementById('q-memo').value=i.memo||'';
+  openModal('quote-modal');
+}
+
+// ── Submit: 견적 입력 ─────────────────────────────────────────
+async function submitQuote() {
+  const i=inquiries.find(x=>x.id===quoteTarget); if(!i) return;
+  i.price=parseInt(document.getElementById('q-price').value)||null;
+  i.delivery=document.getElementById('q-delivery').value;
+  i.supplier=document.getElementById('q-supplier').value;
+  i.status='견적완료';
+  i.memo=document.getElementById('q-memo').value;
+  i.quoteDate=new Date().toISOString().slice(0,10);
+
+  notifs.push({id:notifs.length+1,type:'quote',text:`구매 → ${i.rep}: ${i.customer} ${i.product} 견적 완료`,time:nowStr(),unread:true});
+
+  const sb=document.getElementById('quote-status');
+  const st=document.getElementById('quote-status-text');
+  sb.classList.add('show');
+  st.textContent='디스코드 알림 전송 중...';
+
+  await sendDiscord(CONFIG.discordRep, {
+    title: `📨 견적 완료 — ${i.rep}님 확인해주세요`,
+    color: 0x378ADD,
+    fields: [
+      { name: '담당자', value: i.rep, inline: true },
+      { name: '고객사', value: i.customer, inline: true },
+      { name: '제품명', value: i.product, inline: false },
+      { name: 'Cat No.', value: i.partNo||'-', inline: true },
+      { name: '견적 금액', value: i.price ? '₩'+i.price.toLocaleString() : '-', inline: true },
+      { name: '공급사', value: i.supplier||'-', inline: true },
+      { name: '납기 가능일', value: i.delivery||'-', inline: true },
+      { name: '메모', value: i.memo||'-', inline: false },
+    ],
+    footer: { text: '수주 여부는 대시보드 견적 목록 → 수주확정 버튼으로 업데이트해주세요' },
+    timestamp: new Date().toISOString()
+  });
+
+  st.textContent=`${i.rep}에게 디스코드 알림 전송 완료!`;
+  await syncToSheet(i);
+  save(); renderAll();
+  if(document.getElementById('tab-inquiries').classList.contains('active')) renderTable();
+  setTimeout(()=>closeModal('quote-modal'), 1600);
+}
+
+// ── 수주 여부 확정 ────────────────────────────────────────────
+let resultTarget = null;
+function openResultModal(id) {
+  resultTarget=id;
+  const i=inquiries.find(x=>x.id===id); if(!i) return;
+  document.getElementById('result-info').textContent=`${i.rep} · ${i.customer} · ${i.product} · ₩${i.price?i.price.toLocaleString():'-'}`;
+  document.getElementById('r-result').value='수주';
+  document.getElementById('r-memo').value=i.memo||'';
+  openModal('result-modal');
+}
+
+async function submitResult() {
+  const i=inquiries.find(x=>x.id===resultTarget); if(!i) return;
+  i.status=document.getElementById('r-result').value;
+  i.memo=document.getElementById('r-memo').value;
+
+  notifs.push({id:notifs.length+1,type:'result',text:`수주확정 → ${i.rep}: ${i.customer} ${i.product} [${i.status}]`,time:nowStr(),unread:true});
+
+  const statusColor = i.status==='수주' ? 0x639922 : 0xE24B4A;
+  const statusEmoji = i.status==='수주' ? '✅' : '❌';
+  await sendDiscord(CONFIG.discordRep, {
+    title: `${statusEmoji} 수주 결과 확정 — ${i.rep}님`,
+    color: statusColor,
+    fields: [
+      { name: '담당자', value: i.rep, inline: true },
+      { name: '결과', value: i.status, inline: true },
+      { name: '고객사', value: i.customer, inline: false },
+      { name: '제품명', value: i.product, inline: true },
+      { name: '금액', value: i.price ? '₩'+i.price.toLocaleString() : '-', inline: true },
+      { name: '메모', value: i.memo||'-', inline: false },
+    ],
+    footer: { text: '어벤션 견적 대시보드' },
+    timestamp: new Date().toISOString()
+  });
+
+  await syncToSheet(i);
+  save(); renderAll();
+  if(document.getElementById('tab-inquiries').classList.contains('active')) renderTable();
+  closeModal('result-modal');
+}
+
+function nowStr() {
+  return new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(/\. /g,'-').replace('.',':').slice(0,-3);
+}
+
+function deleteInquiry(id) {
+  const i = inquiries.find(x=>x.id===id);
+  if(!i) return;
+  if(!confirm(`[${i.customer}] ${i.product} 견적을 삭제하시겠습니까?`)) return;
+  inquiries = inquiries.filter(x=>x.id!==id);
+  save(); renderAll(); renderTable();
+}
+
+function renderAll() {
+  renderMetrics(); renderRepStats(); renderRecent(); updateBadges(); renderNotifs();
+  setTimeout(renderTrend, 80);
+}
+
+renderAll();
+</script>
+</body>
+</html>
