@@ -255,11 +255,15 @@
         <select id="f-rep" onchange="renderTable()"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
         <select id="f-status" onchange="renderTable()">
           <option value="">전체 상태</option>
-          <option>대기</option><option>확인 중</option><option>견적완료</option>
-          <option>수주</option><option>미수주</option><option>견적불가</option>
+          <option>대기</option><option>확인 중</option><option>견적완료</option><option>견적불가</option>
+        </select>
+        <select id="f-result" onchange="renderTable()">
+          <option value="">전체 수주결과</option>
+          <option>수주</option><option>미수주</option>
         </select>
         <span style="flex:1;"></span>
         <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
+        <button class="btn" onclick="downloadExcel()" style="display:flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 엑셀 다운로드</button>
       </div>
 
       <!-- 일괄 삭제 바 (마스터 전용, 선택 시 노출) -->
@@ -565,12 +569,12 @@ async function bulkDelete() {
 
 /* ── 통계 ── */
 function getStats() {
-  const won = inquiries.filter(i=>i.status==='수주').length;
-  const lost = inquiries.filter(i=>i.status==='미수주').length;
+  const won = inquiries.filter(i=>i.result==='수주').length;
+  const lost = inquiries.filter(i=>i.result==='미수주').length;
   const pending = inquiries.filter(i=>['대기','대기중','확인 중'].includes(i.status)).length;
   const decided = won + lost;
   const rate = decided > 0 ? Math.round(won/decided*100) : 0;
-  const totalAmt = inquiries.filter(i=>i.status==='수주'&&i.price).reduce((s,i)=>s+i.price, 0);
+  const totalAmt = inquiries.filter(i=>i.result==='수주'&&i.price).reduce((s,i)=>s+i.price, 0);
   return { total:inquiries.length, won, lost, pending, decided, rate, totalAmt };
 }
 
@@ -589,14 +593,14 @@ function renderRepStats() {
   let html = '';
   reps.forEach((rep,i) => {
     const mine = inquiries.filter(x=>x.rep===rep);
-    const won = mine.filter(x=>x.status==='수주').length;
-    const decided = won + mine.filter(x=>x.status==='미수주').length;
+    const won = mine.filter(x=>x.result==='수주').length;
+    const decided = won + mine.filter(x=>x.result==='미수주').length;
     const rate = decided>0?Math.round(won/decided*100):0;
     const initials = rep[0]+rep[rep.length-1];
     html += `<div class="rep-row">
       <div class="avatar ${AV[i]}">${initials}</div>
       <div class="rep-name">${rep}</div>
-      <div class="rep-meta"><span>문의 <b>${mine.length}</b></span><span>수주 <b>${won}</b></span><span>미수주 <b>${mine.filter(x=>x.status==='미수주').length}</b></span></div>
+      <div class="rep-meta"><span>문의 <b>${mine.length}</b></span><span>수주 <b>${won}</b></span><span>미수주 <b>${mine.filter(x=>x.result==='미수주').length}</b></span></div>
       <div class="rate-wrap"><div class="rate-num">${rate}%</div><div class="prog"><div class="prog-fill" style="width:${rate}%"></div></div></div>
     </div>`;
   });
@@ -652,9 +656,11 @@ function renderTable() {
   const s = document.getElementById('f-status').value;
   const isMaster = currentUserEmail === 'ink@avention.co.kr';
 
+  const res = document.getElementById('f-result') ? document.getElementById('f-result').value : '';
   const list = inquiries.filter(i => {
     if(r && i.rep!==r) return false;
     if(s && i.status!==s) return false;
+    if(res && i.result!==res) return false;
     return true;
   }).sort((a,b)=>b.id-a.id);
 
@@ -681,22 +687,22 @@ function renderTable() {
       }
     }
 
-    /* 수주결과 컬럼 — 견적완료/수주/미수주 상태에서 isOwner면 드롭다운 표시 */
+    /* 수주결과 컬럼 — 견적완료 상태에서만 활성화, result 필드 기준 */
     let resultHtml = '-';
-    if (['견적완료','수주','미수주'].includes(i.status)) {
+    if (i.status === '견적완료') {
       if (isOwner) {
-        const curVal = (i.status === '수주' || i.status === '미수주') ? i.status : '';
+        const curVal = i.result || '';
+        const selStyle = curVal==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;'
+                       : curVal==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
         resultHtml = `<div class="result-select-wrap">
-          <select class="result-select" onchange="handleSalesResult(this, ${i.id})" style="${curVal==='수주'?'background:#EAF3DE;color:#27500A;border-color:#C0DD97;':curVal==='미수주'?'background:#FCEBEB;color:#791F1F;border-color:#F09595;':''}">
+          <select class="result-select" onchange="handleSalesResult(this, ${i.id})" style="${selStyle}">
             <option value="" ${curVal===''?'selected':''}>결과 선택</option>
             <option value="수주" ${curVal==='수주'?'selected':''}>수주</option>
             <option value="미수주" ${curVal==='미수주'?'selected':''}>미수주</option>
           </select>
         </div>`;
-      } else if (i.status === '수주' || i.status === '미수주') {
-        resultHtml = badgeHtml(i.status);
       } else {
-        resultHtml = `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`;
+        resultHtml = i.result ? badgeHtml(i.result) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`;
       }
     }
 
@@ -757,9 +763,9 @@ function renderAnalytics() {
   ['rep-chart','result-chart','rate-chart'].forEach(id=>{if(charts[id])charts[id].destroy();});
   const reps = ['BML','LSB','POL','YSJ'];
   charts['rep-chart'] = new Chart(document.getElementById('rep-chart'),{ type:'doughnut', data:{labels:reps,datasets:[{data:reps.map(r=>inquiries.filter(i=>i.rep===r&&i.status==='수주').length),backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}} });
-  const won=inquiries.filter(i=>i.status==='수주').length, lost=inquiries.filter(i=>i.status==='미수주').length, quoted=inquiries.filter(i=>i.status==='견적완료').length, wait=inquiries.filter(i=>['대기','대기중','확인 중'].includes(i.status)).length, unquotable=inquiries.filter(i=>i.status==='견적불가').length;
+  const won=inquiries.filter(i=>i.result==='수주').length, lost=inquiries.filter(i=>i.result==='미수주').length, quoted=inquiries.filter(i=>i.status==='견적완료'&&!i.result).length, wait=inquiries.filter(i=>['대기','대기중','확인 중'].includes(i.status)).length, unquotable=inquiries.filter(i=>i.status==='견적불가').length;
   charts['result-chart'] = new Chart(document.getElementById('result-chart'),{ type:'bar', data:{labels:['수주','미수주','견적완료','대기/확인 중','견적불가'],datasets:[{data:[won,lost,quoted,wait,unquotable],backgroundColor:['#639922','#E24B4A','#378ADD','#BA7517','#999999']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}} });
-  const rates = reps.map(r=>{ const dec=inquiries.filter(i=>i.rep===r&&['수주','미수주'].includes(i.status)); const w=inquiries.filter(i=>i.rep===r&&i.status==='수주').length; return dec.length>0?Math.round(w/dec.length*100):0; });
+  const rates = reps.map(r=>{ const dec=inquiries.filter(i=>i.rep===r&&['수주','미수주'].includes(i.result)); const w=inquiries.filter(i=>i.rep===r&&i.result==='수주').length; return dec.length>0?Math.round(w/dec.length*100):0; });
   charts['rate-chart'] = new Chart(document.getElementById('rate-chart'),{ type:'bar', data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]}, options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,ticks:{callback:v=>v+'%'}}}} });
 }
 
@@ -770,7 +776,7 @@ async function sendDiscord(webhookUrl, embed) {
 async function submitInquiry() {
   const rep=document.getElementById('i-rep').value, customer=document.getElementById('i-customer').value.trim(), product=document.getElementById('i-product').value.trim();
   if(!customer||!product) { alert('고객사와 제품명을 입력해주세요.'); return; }
-  const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:'', quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', text:`최초 견적 문의 등록 (수량: ${document.getElementById('i-qty').value.trim()})` }] };
+  const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:'', quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text:`최초 견적 문의 등록 (수량: ${document.getElementById('i-qty').value.trim()})` }] };
   await db.collection("inquiries").doc(String(inq.id)).set(inq);
   await db.collection("notifs").add({ id:Date.now(), text:`${rep} → 구매: ${customer} ${product} 견적 문의`, time:nowStr(), unread:true });
   const sb=document.getElementById('inq-status'); const st=document.getElementById('inq-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
@@ -781,7 +787,7 @@ async function submitInquiry() {
 async function markAsChecking(id) {
   const i = inquiries.find(x=>x.id===id); if(!i) return;
   i.status = '확인 중'; i.logs = i.logs||[];
-  i.logs.push({ date:nowStr(), type:'quote', text:'👁️ 구매팀에서 견적 확인/진행 중입니다.' });
+  i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:'👁️ 구매팀에서 견적 확인/진행 중입니다.' });
   await db.collection("inquiries").doc(String(id)).update({ status:i.status, logs:i.logs });
   await db.collection("notifs").add({ id:Date.now(), text:`구매팀 → ${i.rep}: ${i.customer} 견적 확인 중`, time:nowStr(), unread:true });
 }
@@ -798,7 +804,7 @@ async function submitQuote() {
   i.price=newPrice; i.delivery=newDelivery; i.supplier=newSupplier; i.status=qStatus; i.memo=newMemo; i.quoteDate=new Date().toISOString().slice(0,10);
   i.logs=i.logs||[];
   let logText = qStatus==='견적불가' ? `🚫 견적 불가\n${newMemo?'사유/메모: '+newMemo:''}` : `✅ 견적완료\n💰 금액: ${newPrice?'₩'+newPrice.toLocaleString():'-'}\n🚚 납기: ${newDelivery||'-'}\n🏢 공급사: ${newSupplier||'-'}${newMemo?'\n📝 메모: '+newMemo:''}`;
-  i.logs.push({ date:nowStr(), type:'quote', text:logText });
+  i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:logText });
   await db.collection("inquiries").doc(String(quoteTarget)).update(i);
   await db.collection("notifs").add({ id:Date.now(), text:`구매 → ${i.rep}: ${i.customer} ${i.product} [${qStatus}]`, time:nowStr(), unread:true });
   const sb=document.getElementById('quote-status'); const st=document.getElementById('quote-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
@@ -814,11 +820,17 @@ function openLogModal(id) {
   if(!i.logs||i.logs.length===0) {
     container.innerHTML='<div style="color:var(--text-tertiary);text-align:center;padding:10px;">이력이 없습니다.</div>';
   } else {
-    container.innerHTML=i.logs.map(log=>`<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid var(--border);">
-      <div style="color:var(--text-tertiary);font-size:10px;margin-bottom:2px;">${log.date}</div>
-      <div style="color:${log.type==='quote'?'#0C447C':(log.type==='comment'?'#854F0B':'#6b6b67')};font-weight:500;font-size:11px;">${log.type==='quote'?'구매팀':(log.type==='comment'?'영업팀':'시스템')}</div>
-      <div style="white-space:pre-wrap;line-height:1.4;">${log.text}</div>
-    </div>`).join('');
+    container.innerHTML=i.logs.map(log=>{
+      const typeColor = log.type==='quote' ? '#0C447C' : log.type==='comment' ? '#854F0B' : log.type==='result' ? '#27500A' : '#6b6b67';
+      const authorLabel = log.author || (log.type==='quote' ? '구매팀' : log.type==='comment' ? '영업팀' : '시스템');
+      return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <span style="color:${typeColor};font-weight:500;font-size:11px;">${authorLabel}</span>
+          <span style="color:var(--text-tertiary);font-size:10px;">${log.date}</span>
+        </div>
+        <div style="white-space:pre-wrap;line-height:1.5;font-size:12px;">${log.text}</div>
+      </div>`;
+    }).join('');
   }
   openModal('log-modal');
 }
@@ -826,7 +838,7 @@ function openLogModal(id) {
 async function submitComment() {
   const i = inquiries.find(x=>x.id===logTarget); if(!i) return;
   const commentText = document.getElementById('l-comment').value.trim(); if(!commentText) { alert("코멘트를 입력해주세요."); return; }
-  i.logs=i.logs||[]; i.logs.push({ date:nowStr(), type:'comment', text:commentText }); i.status='대기';
+  i.logs=i.logs||[]; i.logs.push({ date:nowStr(), type:'comment', author:`영업팀 (${i.rep})`, text:commentText }); i.status='대기';
   await db.collection("inquiries").doc(String(logTarget)).update({ logs:i.logs, status:'대기' });
   await db.collection("notifs").add({ id:Date.now(), text:`${i.rep} → 구매: ${i.customer} 재견적/코멘트 등록`, time:nowStr(), unread:true });
   await sendDiscord(CONFIG.discordBuyer, { title:'💬 영업팀 코멘트', color:0xBA7517, fields:[{name:'영업담당자',value:i.rep,inline:true},{name:'고객사',value:i.customer,inline:true},{name:'제품명',value:i.product,inline:false},{name:'코멘트',value:commentText,inline:false}], footer:{text:'어벤션 견적 대시보드'}, timestamp:new Date().toISOString() });
@@ -835,9 +847,16 @@ async function submitComment() {
 
 async function submitResult() {
   const i = inquiries.find(x=>x.id===resultTarget); if(!i) return;
-  i.status=document.getElementById('r-result').value; i.memo=document.getElementById('r-memo').value;
-  await db.collection("inquiries").doc(String(resultTarget)).update({ status:i.status, memo:i.memo });
-  await db.collection("notifs").add({ id:Date.now(), text:`수주확정 → ${i.rep}: ${i.customer} ${i.product} [${i.status}]`, time:nowStr(), unread:true });
+  const resultVal = document.getElementById('r-result').value;
+  const memoVal = document.getElementById('r-memo').value;
+  i.result = resultVal; i.memo = memoVal;
+  i.logs = i.logs||[];
+  const actor = currentUserEmail === 'ink@avention.co.kr' ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
+  let logText = resultVal==='수주' ? '🏆 수주 확정' : '❌ 미수주';
+  if(memoVal) logText += '\n📝 메모: ' + memoVal;
+  i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
+  await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, memo:memoVal, logs:i.logs });
+  await db.collection("notifs").add({ id:Date.now(), text:`수주확정 → ${i.rep}: ${i.customer} ${i.product} [${resultVal}]`, time:nowStr(), unread:true });
   closeModal('result-modal');
 }
 
@@ -845,6 +864,21 @@ function nowStr() {
   const d=new Date(); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0');
   let h=d.getHours(); const min=String(d.getMinutes()).padStart(2,'0'); const ampm=h>=12?'오후':'오전'; h=h%12; h=h?h:12;
   return `${yyyy}-${mm}-${dd} ${ampm} ${String(h).padStart(2,'0')}:${min}`;
+}
+
+
+function downloadExcel() {
+  const today = new Date();
+  const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  const exportData = inquiries.map(i => ({
+    '문의일': i.date, '담당자': i.rep, '고객사': i.customer, 'Cat No.': i.partNo||'', '제품명': i.product,
+    'CAS No.': i.casNo||'', 'Package': i.pkg||'', '수량': i.qty||'', '금액(원)': i.price||'',
+    '납기': i.delivery||'', '공급사': i.supplier||'', '상태': i.status, '메모': i.memo||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '견적내역');
+  XLSX.writeFile(wb, '어벤션_견적관리_' + dateStr + '.xlsx');
 }
 
 function renderAll() {
