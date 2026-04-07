@@ -681,22 +681,23 @@ function renderTable() {
       }
     }
 
-    /* 수주결과 컬럼 */
+    /* 수주결과 컬럼 — 견적완료/수주/미수주 상태에서 isOwner면 드롭다운 표시 */
     let resultHtml = '-';
-    if (i.status === '견적완료') {
+    if (['견적완료','수주','미수주'].includes(i.status)) {
       if (isOwner) {
+        const curVal = (i.status === '수주' || i.status === '미수주') ? i.status : '';
         resultHtml = `<div class="result-select-wrap">
-          <select class="result-select" onchange="handleSalesResult(this, ${i.id})">
-            <option value="">결과 선택</option>
-            <option value="수주">수주</option>
-            <option value="미수주">미수주</option>
+          <select class="result-select" onchange="handleSalesResult(this, ${i.id})" style="${curVal==='수주'?'background:#EAF3DE;color:#27500A;border-color:#C0DD97;':curVal==='미수주'?'background:#FCEBEB;color:#791F1F;border-color:#F09595;':''}">
+            <option value="" ${curVal===''?'selected':''}>결과 선택</option>
+            <option value="수주" ${curVal==='수주'?'selected':''}>수주</option>
+            <option value="미수주" ${curVal==='미수주'?'selected':''}>미수주</option>
           </select>
         </div>`;
+      } else if (i.status === '수주' || i.status === '미수주') {
+        resultHtml = badgeHtml(i.status);
       } else {
         resultHtml = `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`;
       }
-    } else if (i.status === '수주' || i.status === '미수주') {
-      resultHtml = badgeHtml(i.status);
     }
 
     return `<tr class="${isChecked ? 'row-selected' : ''}">
