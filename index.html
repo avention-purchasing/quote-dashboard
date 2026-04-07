@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <style>
-  /* 🎨 원본 CSS 디자인 절대 보존 구역 (수정 금지) */
+  /* 🎨 원본 CSS 디자인 절대 보존 구역 */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg-primary: #ffffff; --bg-secondary: #f5f5f3; --bg-tertiary: #eeece6;
@@ -254,15 +254,11 @@
         <select id="f-rep" onchange="renderTable()"><option value="">전체 담당자</option><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select>
         <select id="f-status" onchange="renderTable()">
           <option value="">전체 상태</option>
-          <option value="대기">대기</option>
-          <option value="확인 중">확인 중</option>
-          <option value="견적완료">견적완료</option>
-          <option value="견적불가">견적불가</option>
+          <option>대기</option><option>확인 중</option><option>견적완료</option><option>견적불가</option>
         </select>
         <select id="f-result" onchange="renderTable()">
           <option value="">전체 수주결과</option>
-          <option value="수주">수주</option>
-          <option value="미수주">미수주</option>
+          <option>수주</option><option>미수주</option>
         </select>
         <span style="flex:1;"></span>
         <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
@@ -281,7 +277,7 @@
             <th class="check-col"><input type="checkbox" id="check-all" onchange="toggleAll(this)"></th>
             <th>문의일</th><th>담당자</th><th>고객사</th><th>Cat No.</th>
             <th>제품명</th><th>CAS No.</th><th>Package</th><th>수량</th>
-            <th>금액</th><th>납기</th><th>상태</th><th>메모</th><th>액션</th><th>결과</th>
+            <th>금액</th><th>납기</th><th>상태</th><th>메모</th><th>액션</th><th>수주결과</th>
           </tr></thead>
           <tbody id="inq-tbody"></tbody>
         </table>
@@ -293,7 +289,19 @@
     </div>
 
     <div id="tab-notifications" class="content">
-      <div class="section-title">알림 내역</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">알림 내역</div>
+        <label id="notif-check-all-label" style="display:none; font-size:12px; cursor:pointer; align-items:center; gap:5px; color:var(--text-secondary);">
+          <input type="checkbox" id="notif-check-all" onchange="toggleAllNotifs(this)" style="width:14px; height:14px; accent-color:var(--text-primary); cursor:pointer;"> 전체 선택
+        </label>
+      </div>
+
+      <div class="bulk-bar" id="notif-bulk-bar" style="display:none;">
+        <span class="bulk-bar-count" id="notif-bulk-count"></span>
+        <button class="bulk-del-btn" onclick="bulkDeleteNotifs()">선택 삭제</button>
+        <button class="bulk-cancel-btn" onclick="clearNotifSelection()">취소</button>
+      </div>
+
       <div class="card" id="notif-list"></div>
     </div>
 
@@ -426,6 +434,7 @@ let quoteTarget = null;
 let logTarget = null;
 let resultTarget = null;
 let selectedIds = new Set();
+let selectedNotifIds = new Set(); // ✅ 알림 선택 ID 저장
 const charts = {};
 
 auth.onAuthStateChanged(user => {
@@ -490,10 +499,11 @@ function switchTab(name, el) {
   el.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='inquiries') { selectedIds.clear(); updateBulkBar(); renderTable(); }
+  if(name==='notifications') { selectedNotifIds.clear(); updateNotifBulkBar(); } // ✅ 탭 이동 시 알림 선택 초기화
   if(name==='analytics') setTimeout(renderAnalytics, 60);
 }
 
-/* ── 체크박스 / 일괄 삭제 ── */
+/* ── 견적 체크박스 / 일괄 삭제 ── */
 function toggleAll(cb) {
   const isMaster = currentUserEmail === 'ink@avention.co.kr';
   if (!isMaster) { cb.checked = false; return; }
@@ -522,7 +532,7 @@ function onRowCheck(id, checked) {
 function getCurrentVisibleIds() {
   const r = document.getElementById('f-rep').value;
   const s = document.getElementById('f-status').value;
-  const res = document.getElementById('f-result').value;
+  const res = document.getElementById('f-result') ? document.getElementById('f-result').value : '';
   return inquiries.filter(i => {
     if(r && i.rep !== r) return false;
     if(s && i.status !== s) return false;
@@ -563,6 +573,80 @@ async function bulkDelete() {
   await batch.commit();
   selectedIds.clear();
   updateBulkBar();
+}
+
+/* ── ✅ 알림 체크박스 / 일괄 삭제 로직 ── */
+function toggleAllNotifs(cb) {
+  const isMaster = currentUserEmail === 'ink@avention.co.kr';
+  if (!isMaster) { cb.checked = false; return; }
+  document.querySelectorAll('.notif-check').forEach(c => { c.checked = cb.checked; });
+  if (cb.checked) {
+    notifs.forEach(n => selectedNotifIds.add(n.docId));
+  } else {
+    selectedNotifIds.clear();
+  }
+  updateNotifBulkBar();
+  highlightNotifSelected();
+}
+
+function onNotifCheck(docId, checked) {
+  if (checked) selectedNotifIds.add(docId);
+  else selectedNotifIds.delete(docId);
+  
+  const allChecks = document.querySelectorAll('.notif-check');
+  const checkedCount = document.querySelectorAll('.notif-check:checked').length;
+  const allCheck = document.getElementById('notif-check-all');
+  if (allCheck) {
+    allCheck.checked = checkedCount === allChecks.length && allChecks.length > 0;
+    allCheck.indeterminate = checkedCount > 0 && checkedCount < allChecks.length;
+  }
+  updateNotifBulkBar();
+  highlightNotifSelected();
+}
+
+function highlightNotifSelected() {
+  document.querySelectorAll('#notif-list .notif-item').forEach(item => {
+    const cb = item.querySelector('.notif-check');
+    if (cb && cb.checked) {
+      item.style.background = 'var(--bg-secondary)'; // 선택 시 배경색 적용
+    } else {
+      item.style.background = ''; // 원래 스타일로 복구
+    }
+  });
+}
+
+function updateNotifBulkBar() {
+  const bar = document.getElementById('notif-bulk-bar');
+  const isMaster = currentUserEmail === 'ink@avention.co.kr';
+  if (!isMaster || selectedNotifIds.size === 0) {
+    if(bar) bar.style.display = 'none';
+    return;
+  }
+  if(bar) {
+    bar.style.display = 'flex';
+    document.getElementById('notif-bulk-count').textContent = `${selectedNotifIds.size}건 선택됨`;
+  }
+}
+
+function clearNotifSelection() {
+  selectedNotifIds.clear();
+  document.querySelectorAll('.notif-check').forEach(c => c.checked = false);
+  const allCheck = document.getElementById('notif-check-all');
+  if (allCheck) { allCheck.checked = false; allCheck.indeterminate = false; }
+  updateNotifBulkBar();
+  highlightNotifSelected();
+}
+
+async function bulkDeleteNotifs() {
+  if (selectedNotifIds.size === 0) return;
+  if (!confirm(`선택한 알림 ${selectedNotifIds.size}건을 삭제하시겠습니까?`)) return;
+  const batch = db.batch();
+  selectedNotifIds.forEach(docId => batch.delete(db.collection("notifs").doc(docId)));
+  await batch.commit();
+  selectedNotifIds.clear();
+  const allCheck = document.getElementById('notif-check-all');
+  if (allCheck) { allCheck.checked = false; allCheck.indeterminate = false; }
+  updateNotifBulkBar();
 }
 
 /* ── 통계 ── */
@@ -685,7 +769,6 @@ function renderTable() {
     }
 
     let resultHtml = '-';
-    // ✅ 수주/미수주는 견적완료 시에만 변경 가능, 권한 체크!
     if (i.status === '견적완료') {
       if (isOwner) {
         const curVal = i.result || '';
@@ -702,7 +785,7 @@ function renderTable() {
         resultHtml = i.result ? badgeHtml(i.result) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`;
       }
     } else if (i.status === '견적불가') {
-      resultHtml = '-'; // 자동으로 - 표시
+      resultHtml = '-';
     } else {
       resultHtml = '-';
     }
@@ -733,20 +816,34 @@ function renderTable() {
 
 function renderNotifs() {
   const el = document.getElementById('notif-list');
-  if(!notifs.length) { el.innerHTML='<div class="empty">알림 없음</div>'; return; }
+  const checkAllLabel = document.getElementById('notif-check-all-label');
+  if(!notifs.length) { 
+    el.innerHTML='<div class="empty">알림 없음</div>'; 
+    if(checkAllLabel) checkAllLabel.style.display = 'none';
+    return; 
+  }
   const isMaster = currentUserEmail === 'ink@avention.co.kr';
-  el.innerHTML = [...notifs].reverse().map(n => `
-    <div class="notif-item${n.unread?' unread':''}">
-      <div>
-        <div class="notif-text">
-          ${n.unread?`<span class="dot"></span>`:'<span style="width:6px;display:inline-block;"></span>'}
-          <span>${n.text}</span>
-          <span class="gmail-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>알림</span>
+  if(checkAllLabel) checkAllLabel.style.display = isMaster ? 'flex' : 'none';
+
+  el.innerHTML = [...notifs].reverse().map(n => {
+    const isChecked = selectedNotifIds.has(n.docId);
+    return `
+    <div class="notif-item${n.unread?' unread':''}" style="${isChecked ? 'background:var(--bg-secondary);' : ''}">
+      <div style="display:flex; align-items:center; gap:10px;">
+        ${isMaster ? `<input type="checkbox" class="notif-check" style="width:14px; height:14px; accent-color:var(--text-primary); cursor:pointer;" ${isChecked ? 'checked' : ''} onchange="onNotifCheck('${n.docId}', this.checked)">` : ''}
+        <div>
+          <div class="notif-text">
+            ${n.unread?`<span class="dot"></span>`:'<span style="width:6px;display:inline-block;"></span>'}
+            <span>${n.text}</span>
+            <span class="gmail-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>알림</span>
+          </div>
+          <div class="notif-time">${n.time}</div>
         </div>
-        <div class="notif-time">${n.time}</div>
       </div>
       ${isMaster ? `<button class="btn btn-sm" style="color:#791F1F;border-color:#F09595;flex-shrink:0;margin-left:10px;" onclick="deleteNotif('${n.docId}')">삭제</button>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  updateNotifBulkBar();
 }
 
 async function deleteNotif(docId) { if(confirm("알림을 삭제하시겠습니까?")) await db.collection("notifs").doc(docId).delete(); }
@@ -846,23 +943,18 @@ async function submitComment() {
   closeModal('log-modal');
 }
 
-// ✅ [피드백 반영] 수주결과는 i.result 에만 저장! 상태(i.status)는 변경하지 않습니다.
 async function submitResult() {
   const i = inquiries.find(x=>x.id===resultTarget); if(!i) return;
   const resultVal = document.getElementById('r-result').value;
   const memoVal = document.getElementById('r-memo').value;
-  
-  i.result = resultVal;
-  i.memo = memoVal;
+  i.result = resultVal; i.memo = memoVal;
   i.logs = i.logs||[];
   const actor = currentUserEmail === 'ink@avention.co.kr' ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
   let logText = resultVal==='수주' ? '🏆 수주 확정' : '❌ 미수주';
   if(memoVal) logText += '\n📝 메모: ' + memoVal;
   i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
-
-  // ⚠️ 중요: i.status는 여기서 절대 업데이트하지 않습니다!
   await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, memo:memoVal, logs:i.logs });
-  await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} ${i.product} [${resultVal}]`, time:nowStr(), unread:true });
+  await db.collection("notifs").add({ id:Date.now(), text:`수주확정 → ${i.rep}: ${i.customer} ${i.product} [${resultVal}]`, time:nowStr(), unread:true });
   closeModal('result-modal');
 }
 
@@ -871,7 +963,6 @@ function nowStr() {
   let h=d.getHours(); const min=String(d.getMinutes()).padStart(2,'0'); const ampm=h>=12?'오후':'오전'; h=h%12; h=h?h:12;
   return `${yyyy}-${mm}-${dd} ${ampm} ${String(h).padStart(2,'0')}:${min}`;
 }
-
 
 function downloadExcel() {
   const today = new Date();
