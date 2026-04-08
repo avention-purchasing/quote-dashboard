@@ -186,7 +186,7 @@
   </div>
 </div>
 
-<div class="app" id="main-app">
+<div class="app" id="main-app" style="max-width: 1650px;">
   <div class="shell">
     <div class="header">
       <div class="header-left">
@@ -448,7 +448,6 @@ let sortCol = 'date', sortDesc = true, currentPage = 1;
 const itemsPerPage = 20;
 let isSubmitting = false; 
 
-// 🚨 XSS 보안 필터 (화면 출력 시 안전한 문자로 변환)
 function esc(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[&<>'"]/g, function(tag) {
@@ -507,7 +506,6 @@ function loginWithGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthPr
 function logout() { if(confirm('로그아웃 하시겠습니까?')) auth.signOut(); }
 
 function startSync() {
-  // 🚨 강제 정렬 에러 해결: 특정 필드 누락 데이터 방어
   db.collection("inquiries").onSnapshot(snap => {
     inquiries = snap.docs.map(doc => {
       let data = doc.data();
@@ -572,47 +570,50 @@ function switchTab(name, el) {
 }
 
 function getFilteredAndSortedInquiries() {
-  const r = document.getElementById('f-rep').value;
-  const s = document.getElementById('f-status').value;
-  const res = document.getElementById('f-result') ? document.getElementById('f-result').value : '';
-  const q = document.getElementById('f-search') ? document.getElementById('f-search').value.toLowerCase() : '';
-  const sd = document.getElementById('f-start-date') ? document.getElementById('f-start-date').value : '';
-  const ed = document.getElementById('f-end-date') ? document.getElementById('f-end-date').value : '';
+  try {
+    const r = document.getElementById('f-rep').value;
+    const s = document.getElementById('f-status').value;
+    const res = document.getElementById('f-result') ? document.getElementById('f-result').value : '';
+    const q = document.getElementById('f-search') ? document.getElementById('f-search').value.toLowerCase() : '';
+    const sd = document.getElementById('f-start-date') ? document.getElementById('f-start-date').value : '';
+    const ed = document.getElementById('f-end-date') ? document.getElementById('f-end-date').value : '';
 
-  let list = inquiries.filter(i => {
-    if(r && i.rep !== r) return false;
-    if(s && i.status !== s) return false;
-    if(res && i.result !== res) return false;
-    
-    // 🚨 빈 값 방어(Null check) 처리된 통합 검색
-    if(q && !(i.customer||'').toLowerCase().includes(q) &&
-            !(i.product||'').toLowerCase().includes(q) &&
-            !(i.spec||'').toLowerCase().includes(q) &&
-            !(i.partNo||'').toLowerCase().includes(q) &&
-            !(i.casNo||'').toLowerCase().includes(q) &&
-            !(i.memo||'').toLowerCase().includes(q)) return false;
-    
-    if(sd && i.date < sd) return false;
-    if(ed && i.date > ed) return false;
-    return true;
-  });
+    let list = inquiries.filter(i => {
+      if(r && i.rep !== r) return false;
+      if(s && i.status !== s) return false;
+      if(res && i.result !== res) return false;
+      
+      if(q && !String(i.customer||'').toLowerCase().includes(q) &&
+              !String(i.product||'').toLowerCase().includes(q) &&
+              !String(i.spec||'').toLowerCase().includes(q) &&
+              !String(i.partNo||'').toLowerCase().includes(q) &&
+              !String(i.casNo||'').toLowerCase().includes(q) &&
+              !String(i.memo||'').toLowerCase().includes(q)) return false;
+      
+      if(sd && i.date < sd) return false;
+      if(ed && i.date > ed) return false;
+      return true;
+    });
 
-  list.sort((a, b) => {
-     let valA = a[sortCol]; let valB = b[sortCol];
-     if (sortCol === 'price' || sortCol === 'qty' || sortCol === 'id') {
-         valA = Number(valA) || 0; valB = Number(valB) || 0;
-     } else if (sortCol === 'date') {
-         valA = String(a.date || ''); valB = String(b.date || '');
-         // 🚨 날짜가 같으면 최신 등록 순(고유 ID 기준) 우선 배치
-         if (valA === valB) return sortDesc ? (b.id || 0) - (a.id || 0) : (a.id || 0) - (b.id || 0);
-     } else {
-         valA = String(valA || ''); valB = String(valB || '');
-     }
-     if (valA < valB) return sortDesc ? 1 : -1;
-     if (valA > valB) return sortDesc ? -1 : 1;
-     return 0;
-  });
-  return list;
+    list.sort((a, b) => {
+       let valA = a[sortCol]; let valB = b[sortCol];
+       if (sortCol === 'price' || sortCol === 'qty' || sortCol === 'id') {
+           valA = Number(valA) || 0; valB = Number(valB) || 0;
+       } else if (sortCol === 'date') {
+           valA = String(a.date || ''); valB = String(b.date || '');
+           if (valA === valB) return sortDesc ? (Number(b.id) || 0) - (Number(a.id) || 0) : (Number(a.id) || 0) - (Number(b.id) || 0);
+       } else {
+           valA = String(valA || ''); valB = String(valB || '');
+       }
+       if (valA < valB) return sortDesc ? 1 : -1;
+       if (valA > valB) return sortDesc ? -1 : 1;
+       return 0;
+    });
+    return list;
+  } catch(e) {
+    console.error("Filter/Sort Error:", e);
+    return [];
+  }
 }
 
 function applyFilters() { currentPage = 1; renderTable(); }
@@ -726,12 +727,10 @@ async function bulkDeleteNotifs() {
   updateNotifBulkBar();
 }
 
-// 🚨 알림 읽음 처리 즉각 반영 (로컬 렌더링 우선)
 async function markNotifRead(docId) {
   const el = document.getElementById('notif-' + docId); if(el) el.classList.remove('unread');
   const notif = notifs.find(n => n.docId === docId); if(notif) notif.unread = false;
-  updateBadges(); 
-  db.collection("notifs").doc(docId).update({unread: false}).catch(e => console.error(e)); 
+  updateBadges(); db.collection("notifs").doc(docId).update({unread: false}).catch(e => console.error(e)); 
 }
 
 async function markAllNotifsRead() {
@@ -759,7 +758,6 @@ function getStats() {
   const decided = won + lost;
   const rate = decided > 0 ? Math.round(won/decided*100) : 0;
   
-  // 🚨 금액 누적 에러(NaN) 방어
   const totalAmt = inquiries.filter(i=>(i.result||'')==='수주' && i.price).reduce((s,i) => {
      const n = Number(String(i.price).replace(/,/g,''));
      return s + (isNaN(n) ? 0 : n);
@@ -802,9 +800,10 @@ function renderRepStats() {
   } catch(e) { console.error("RepStats Rendering Error:", e); }
 }
 
+// ✅ 피드백 1: 최근 견적 현황 리스트 (제품명 넓게 CSS 처리)
 function renderRecent() {
   try {
-    const list = [...inquiries].sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,6);
+    const list = [...inquiries].sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0)).slice(0,6);
     document.getElementById('recent-list').innerHTML = list.map(i => {
       const status = String(i.status || '');
       const rep = String(i.rep || '');
@@ -812,11 +811,12 @@ function renderRecent() {
       const product = String(i.product || '');
       const bKey = STATUS_BADGE[status] || 'b-wait';
       
+      // ✅ 제품명 너비 확장을 위해 인라인 flex & text-overflow 속성 수정
       return `<div class="recent-item">
         <span class="badge ${bKey}">${esc(status)}</span>
         <span style="color:var(--text-secondary);min-width:35px;">${esc(rep)}</span>
-        <span style="font-weight:500;flex:1;">${esc(customer)}</span>
-        <span style="color:var(--text-secondary);font-size:11px;">${product.length>10 ? esc(product).slice(0,10)+'…' : esc(product)}</span>
+        <span style="font-weight:500; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px;">${esc(customer)}</span>
+        <span style="color:var(--text-secondary); font-size:11px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;">${esc(product)}</span>
       </div>`;
     }).join('') || '<div class="card-pad" style="color:var(--text-secondary); font-size:12px;">데이터가 없습니다.</div>';
   } catch(e) { 
@@ -875,71 +875,74 @@ function renderTable() {
 
   try {
     document.getElementById('inq-tbody').innerHTML = pagedList.length ? pagedList.map(i => {
-      const rep = String(i.rep || '');
-      const status = String(i.status || '');
-      const result = String(i.result || '');
-      const customer = String(i.customer || '');
-      const product = String(i.product || '');
-      
-      const isOwner = isMaster || (CONFIG.repEmails[rep] && CONFIG.repEmails[rep].toLowerCase() === currentUserEmail);
-      const hasComment = Array.isArray(i.logs) && i.logs.some(l => l.type === 'comment');
-      const isChecked = selectedIds.has(i.id);
-      
-      let actionBtns = ''; const logStyle = hasComment ? 'act-amber' : '';
-      actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">${hasComment ? '💬 이력' : '이력'}</button>`;
-      
-      if (isMaster) {
-        if (['대기','대기중'].includes(status)) actionBtns += `<button class="act-btn act-blue" onclick="event.stopPropagation(); markAsChecking(${i.id})">진행</button>`;
-        if (['대기','대기중','확인 중'].includes(status)) actionBtns += `<button class="act-btn act-green" onclick="event.stopPropagation(); openQuoteModal(${i.id})">견적입력</button>`;
-        else actionBtns += `<button class="act-btn" onclick="event.stopPropagation(); openQuoteModal(${i.id})">수정</button>`;
+      try {
+        const repStr = String(i.rep || '');
+        const statusStr = String(i.status || '');
+        const resultStr = String(i.result || '');
+        const prodStr = String(i.product || '');
+        
+        const isOwner = isMaster || (CONFIG.repEmails[repStr] && CONFIG.repEmails[repStr].toLowerCase() === currentUserEmail);
+        const hasComment = Array.isArray(i.logs) && i.logs.some(l => l && l.type === 'comment');
+        const isChecked = selectedIds.has(i.id);
+        
+        let actionBtns = ''; const logStyle = hasComment ? 'act-amber' : '';
+        actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">${hasComment ? '💬 이력' : '이력'}</button>`;
+        if (isMaster) {
+          if (['대기','대기중'].includes(statusStr)) actionBtns += `<button class="act-btn act-blue" onclick="event.stopPropagation(); markAsChecking(${i.id})">진행</button>`;
+          if (['대기','대기중','확인 중'].includes(statusStr)) actionBtns += `<button class="act-btn act-green" onclick="event.stopPropagation(); openQuoteModal(${i.id})">견적입력</button>`;
+          else actionBtns += `<button class="act-btn" onclick="event.stopPropagation(); openQuoteModal(${i.id})">수정</button>`;
+        }
+
+        let resultHtml = '-';
+        if (statusStr === '견적완료') {
+          if (isOwner) {
+            const selStyle = resultStr==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;' : resultStr==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
+            resultHtml = `<button class="act-btn" onclick="event.stopPropagation(); openResultModalDirect(${i.id})" style="${selStyle} font-weight:bold;">${esc(resultStr || '결과 입력')}</button>`;
+          } else { resultHtml = resultStr ? badgeHtml(resultStr) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
+        } else if (statusStr === '견적불가') { resultHtml = '-'; }
+
+        return `<tr class="${isChecked ? 'row-selected' : ''}" style="cursor:pointer;" 
+          onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
+          onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')" 
+          onclick="openLogModal(${i.id})">
+          <td class="check-col" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" ${isMaster ? '' : 'style="display:none;"'} ${isChecked ? 'checked' : ''} onchange="onRowCheck(${i.id}, this.checked)"></td>
+          <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.date)}</td>
+          <td style="white-space:nowrap;">${esc(repStr)}</td>
+          <td style="font-weight:500;min-width:90px;">${esc(i.customer)}</td>
+          <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.partNo)||'-'}</td>
+          <td style="font-size:12px;min-width:110px;">${prodStr.length>15?esc(prodStr).slice(0,15)+'…':esc(prodStr)}</td>
+          <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.spec)||'-'}</td>
+          <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.casNo)||'-'}</td>
+          <td style="font-size:11px;white-space:nowrap;">${esc(i.pkg)||'-'}</td>
+          <td style="font-size:12px;white-space:nowrap;">${esc(i.qty)||'-'}</td>
+          <td style="font-size:12px;white-space:nowrap;font-weight:500;">${formatPrice(i.price)}</td>
+          <td style="font-size:12px;white-space:nowrap;">${esc(i.delivery)||'-'}</td>
+          <td style="white-space:nowrap;">${badgeHtml(statusStr)}</td>
+          <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);" title="${esc(i.memo)}">${esc(i.memo)||'-'}</td>
+          <td onclick="event.stopPropagation();"><div class="action-group">${actionBtns}</div></td>
+          <td onclick="event.stopPropagation();" style="white-space:nowrap; text-align:center;">${resultHtml}</td>
+        </tr>`;
+      } catch(mapErr) {
+        console.error("Row Mapping Error:", mapErr);
+        return `<tr><td colspan="16" style="color:red; text-align:center; font-size:12px;">이 데이터를 렌더링할 수 없습니다. (ID: ${i.id})</td></tr>`;
       }
-
-      let resultHtml = '-';
-      if (status === '견적완료') {
-        if (isOwner) {
-          const curVal = result;
-          const selStyle = curVal==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;' : curVal==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
-          resultHtml = `<button class="act-btn" onclick="event.stopPropagation(); openResultModalDirect(${i.id})" style="${selStyle} font-weight:bold;">${esc(curVal || '결과 입력')}</button>`;
-        } else { resultHtml = result ? badgeHtml(result) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
-      } else if (status === '견적불가') { resultHtml = '-'; }
-
-      return `<tr class="${isChecked ? 'row-selected' : ''}" style="cursor:pointer;" 
-        onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
-        onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')" 
-        onclick="openLogModal(${i.id})">
-        <td class="check-col" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" ${isMaster ? '' : 'style="display:none;"'} ${isChecked ? 'checked' : ''} onchange="onRowCheck(${i.id}, this.checked)"></td>
-        <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.date)}</td>
-        <td style="white-space:nowrap;">${esc(rep)}</td>
-        <td style="font-weight:500;min-width:90px;">${esc(customer)}</td>
-        <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.partNo)||'-'}</td>
-        <td style="font-size:12px;min-width:110px;">${product.length>15 ? esc(product).slice(0,15)+'…' : esc(product)}</td>
-        <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.spec)||'-'}</td>
-        <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.casNo)||'-'}</td>
-        <td style="font-size:11px;white-space:nowrap;">${esc(i.pkg)||'-'}</td>
-        <td style="font-size:12px;white-space:nowrap;">${esc(i.qty)||'-'}</td>
-        <td style="font-size:12px;white-space:nowrap;font-weight:500;">${formatPrice(i.price)}</td>
-        <td style="font-size:12px;white-space:nowrap;">${esc(i.delivery)||'-'}</td>
-        <td style="white-space:nowrap;">${badgeHtml(status)}</td>
-        <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);" title="${esc(i.memo)}">${esc(i.memo)||'-'}</td>
-        <td onclick="event.stopPropagation();"><div class="action-group">${actionBtns}</div></td>
-        <td onclick="event.stopPropagation();" style="white-space:nowrap; text-align:center;">${resultHtml}</td>
-      </tr>`;
     }).join('') : '<tr><td colspan="16" class="empty">해당하는 항목 없음</td></tr>';
-  } catch(e) {
-    console.error("Table Rendering Error:", e);
-    document.getElementById('inq-tbody').innerHTML = '<tr><td colspan="16" class="empty" style="color:red;">데이터 로딩 중 오류가 발생했습니다. (관리자 문의 요망)</td></tr>';
-  }
 
-  let pageHtml = '';
-  if (totalPages > 1) {
-    let startPage = Math.max(1, currentPage - 2); let endPage = Math.min(totalPages, startPage + 4);
-    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
-    if (currentPage > 1) pageHtml += `<button onclick="changePage(${currentPage - 1})" style="padding:4px 8px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; cursor:pointer; font-size:11px;">◀</button>`;
-    for(let p = startPage; p <= endPage; p++) pageHtml += `<button onclick="changePage(${p})" style="padding:4px 10px; border:1px solid var(--border); background:${p===currentPage?'var(--text-primary)':'var(--bg-primary)'}; color:${p===currentPage?'var(--bg-primary)':'var(--text-primary)'}; border-radius:4px; cursor:pointer; font-size:12px;">${p}</button>`;
-    if (currentPage < totalPages) pageHtml += `<button onclick="changePage(${currentPage + 1})" style="padding:4px 8px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; cursor:pointer; font-size:11px;">▶</button>`;
+    let pageHtml = '';
+    if (totalPages > 1) {
+      let startPage = Math.max(1, currentPage - 2); let endPage = Math.min(totalPages, startPage + 4);
+      if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+      if (currentPage > 1) pageHtml += `<button onclick="changePage(${currentPage - 1})" style="padding:4px 8px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; cursor:pointer; font-size:11px;">◀</button>`;
+      for(let p = startPage; p <= endPage; p++) pageHtml += `<button onclick="changePage(${p})" style="padding:4px 10px; border:1px solid var(--border); background:${p===currentPage?'var(--text-primary)':'var(--bg-primary)'}; color:${p===currentPage?'var(--bg-primary)':'var(--text-primary)'}; border-radius:4px; cursor:pointer; font-size:12px;">${p}</button>`;
+      if (currentPage < totalPages) pageHtml += `<button onclick="changePage(${currentPage + 1})" style="padding:4px 8px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; cursor:pointer; font-size:11px;">▶</button>`;
+    }
+    document.getElementById('pagination').innerHTML = pageHtml;
+    updateBulkBar();
+    
+  } catch(e) {
+    console.error("Table Rendering Crash:", e);
+    document.getElementById('inq-tbody').innerHTML = `<tr><td colspan="16" style="color:red; padding:2rem; text-align:center;">데이터를 불러오는 중 시스템 에러가 발생했습니다.<br><br>오류내용: ${e.message}</td></tr>`;
   }
-  document.getElementById('pagination').innerHTML = pageHtml;
-  updateBulkBar();
 }
 
 function renderNotifs() {
@@ -964,7 +967,7 @@ function renderNotifs() {
       </div>`;
     }).join('');
     updateNotifBulkBar();
-  } catch(e) { console.error("Notif Error:", e); }
+  } catch(e) { console.error("Notifs Render Error:", e); }
 }
 
 function renderAnalytics() {
@@ -976,7 +979,7 @@ function renderAnalytics() {
     charts['result-chart'] = new Chart(document.getElementById('result-chart'),{ type:'bar', data:{labels:['수주','미수주','견적완료','대기/확인 중','견적불가'],datasets:[{data:[won,lost,quoted,wait,unquotable],backgroundColor:['#639922','#E24B4A','#378ADD','#BA7517','#999999']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}} });
     const rates = reps.map(r=>{ const dec=inquiries.filter(i=>(i.rep||'')===r&&['수주','미수주'].includes(i.result||'')); const w=inquiries.filter(i=>(i.rep||'')===r&&(i.result||'')==='수주').length; return dec.length>0?Math.round(w/dec.length*100):0; });
     charts['rate-chart'] = new Chart(document.getElementById('rate-chart'),{ type:'bar', data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]}, options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100}}} });
-  } catch(e) { console.error("Chart Error:", e); }
+  } catch(e) { console.error("Chart Render Error:", e); }
 }
 
 async function sendDiscord(webhookUrl, embed) { try { await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ embeds:[embed] }) }); } catch(e) {} }
@@ -994,12 +997,12 @@ async function submitInquiry(keepOpen = false) {
     st.textContent='성공적으로 등록되었습니다!'; 
     if(keepOpen) { setTimeout(() => { sb.classList.remove('show'); document.getElementById('i-partno').value = ''; document.getElementById('i-product').value = ''; document.getElementById('i-spec').value = ''; document.getElementById('i-casno').value = ''; document.getElementById('i-pkg').value = ''; document.getElementById('i-qty').value = ''; document.getElementById('i-memo').value = ''; isSubmitting = false; document.getElementById('i-product').focus(); }, 1200); }
     else { setTimeout(()=>{ closeModal('inq-modal'); clearInqForm(); isSubmitting = false; }, 1200); }
-  } catch(e) { alert("저장 실패: 권한이 없거나 네트워크를 확인해주세요."); isSubmitting = false; }
+  } catch(e) { alert("저장 실패: 오류가 발생했습니다. 권한을 확인해주세요."); isSubmitting = false; }
 }
 
 async function markAsChecking(id) {
   const i = inquiries.find(x=>x.id===id); if(!i) return;
-  i.status = '확인 중'; i.logs = i.logs||[];
+  i.status = '확인 중'; if(!Array.isArray(i.logs)) i.logs = [];
   i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:'👁️ 구매팀에서 견적 확인/진행 중입니다.' });
   await db.collection("inquiries").doc(String(id)).update({ status:i.status, logs:i.logs });
   await db.collection("notifs").add({ id:Date.now(), text:`구매팀 → ${i.rep}: ${i.customer} 견적 확인 중`, time:nowStr(), unread:true });
@@ -1007,7 +1010,7 @@ async function markAsChecking(id) {
 
 function openQuoteModal(id) {
   quoteTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
-  document.getElementById('quote-info').textContent = `${i.rep||''} · ${i.customer||''} · ${i.product||''} ${i.spec ? '('+i.spec+')' : ''} · Cat No.: ${i.partNo||'-'} · CAS: ${i.casNo||'-'} · ${i.pkg||''} × ${i.qty||''}`;
+  document.getElementById('quote-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} ${i.spec ? '('+esc(i.spec)+')' : ''} · Cat No.: ${esc(i.partNo)||'-'} · CAS: ${esc(i.casNo)||'-'} · ${esc(i.pkg)||''} × ${esc(i.qty)||''}`;
   document.getElementById('q-price').value = i.price ? i.price.toLocaleString() : ''; 
   document.getElementById('q-delivery').value = i.delivery||''; document.getElementById('q-supplier').value = i.supplier||''; document.getElementById('q-status').value = i.status==='견적불가'?'견적불가':'견적완료'; document.getElementById('q-memo').value = i.memo||''; openModal('quote-modal');
   setTimeout(() => document.getElementById('q-price').focus(), 50); 
@@ -1020,7 +1023,7 @@ async function submitQuote() {
     const rawPrice = document.getElementById('q-price').value.replace(/,/g, '');
     const newPrice=parseInt(rawPrice)||null, newDelivery=document.getElementById('q-delivery').value, newSupplier=document.getElementById('q-supplier').value, newMemo=document.getElementById('q-memo').value, qStatus=document.getElementById('q-status').value;
     i.price=newPrice; i.delivery=newDelivery; i.supplier=newSupplier; i.status=qStatus; i.memo=newMemo; i.quoteDate=new Date().toISOString().slice(0,10);
-    i.logs=i.logs||[]; let logText = qStatus==='견적불가' ? `🚫 견적 불가\n${newMemo?'사유/메모: '+newMemo:''}` : `✅ 견적완료\n💰 금액: ${newPrice?'₩'+newPrice.toLocaleString():'-'}\n🚚 납기: ${newDelivery||'-'}\n🏢 공급사: ${newSupplier||'-'}${newMemo?'\n📝 메모: '+newMemo:''}`;
+    if(!Array.isArray(i.logs)) i.logs = []; let logText = qStatus==='견적불가' ? `🚫 견적 불가\n${newMemo?'사유/메모: '+newMemo:''}` : `✅ 견적완료\n💰 금액: ${newPrice?'₩'+newPrice.toLocaleString():'-'}\n🚚 납기: ${newDelivery||'-'}\n🏢 공급사: ${newSupplier||'-'}${newMemo?'\n📝 메모: '+newMemo:''}`;
     i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:logText });
     let notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [${qStatus}]`;
     if (qStatus === '견적불가' && newMemo) notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [견적불가: ${newMemo}]`;
@@ -1029,12 +1032,12 @@ async function submitQuote() {
     const sb=document.getElementById('quote-status'); const st=document.getElementById('quote-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
     await sendDiscord(CONFIG.discordRep, { title: qStatus === '견적불가' ? `🚫 견적 불가` : `📨 견적 완료`, color: qStatus === '견적불가' ? 0x999999 : 0x378ADD, fields:[{name:'담당자',value:i.rep,inline:true},{name:'고객사',value:i.customer,inline:true},{name:'제품명',value:i.product,inline:false},{name:'견적 금액',value:i.price?'₩'+i.price.toLocaleString():'-',inline:true},{name:'공급사',value:i.supplier||'-',inline:true},{name:'납기',value:i.delivery||'-',inline:true}], timestamp: new Date().toISOString() });
     st.textContent=`${i.rep}에게 알림 전송 완료!`; setTimeout(()=>{ closeModal('quote-modal'); clearQuoteForm(); isSubmitting = false; }, 1200);
-  } catch(e) { alert("저장 실패: 권한이 없거나 네트워크를 확인해주세요."); isSubmitting = false; }
+  } catch(e) { alert("저장 실패: 에러가 발생했습니다."); isSubmitting = false; }
 }
 
 function openResultModalDirect(id) {
   resultTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
-  document.getElementById('result-info').textContent = `${i.rep||''} · ${i.customer||''} · ${i.product||''} · ${i.spec||''} | 기존 견적가: ₩${i.price?i.price.toLocaleString():'-'}`;
+  document.getElementById('result-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} · ${esc(i.spec)||''} | 기존 견적가: ₩${i.price?i.price.toLocaleString():'-'}`;
   document.getElementById('r-price').value = i.price ? i.price.toLocaleString() : ''; 
   document.getElementById('r-result').value = i.result || ''; 
   document.getElementById('r-memo').value = i.memo || '';
@@ -1047,27 +1050,28 @@ async function submitResult() {
   isSubmitting = true;
   try {
     const rawPrice = document.getElementById('r-price').value.replace(/,/g, '');
-    const finalPrice = parseInt(rawPrice) || i.price;
+    const finalPrice = parseInt(rawPrice) || i.price; 
     const memoVal = document.getElementById('r-memo').value;
-    i.result = resultVal; i.memo = memoVal; i.price = finalPrice; i.logs = i.logs||[];
+    i.result = resultVal; i.memo = memoVal; i.price = finalPrice; 
+    if(!Array.isArray(i.logs)) i.logs = [];
     const actor = currentUserEmail === 'ink@avention.co.kr' ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
-    let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice.toLocaleString()})` : `❌ 미수주`;
+    let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice?finalPrice.toLocaleString():'-'})` : `❌ 미수주`;
     if(memoVal) logText += '\n📝 메모: ' + memoVal;
     i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
     await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, memo:memoVal, logs:i.logs });
     await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} [${resultVal}]`, time:nowStr(), unread:true });
     closeModal('result-modal');
-  } catch(e) { alert("저장 실패: 권한이 없거나 네트워크를 확인해주세요."); } finally { isSubmitting = false; }
+  } catch(e) { alert("저장 실패: 에러가 발생했습니다."); } finally { isSubmitting = false; }
 }
 
 function openLogModal(id) {
   logTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
-  document.getElementById('log-info').textContent = `${i.rep||''} · ${i.customer||''} · ${i.product||''} ${i.spec ? '('+i.spec+')' : ''} | 현재가: ${i.price?'₩'+i.price.toLocaleString():'미견적'}`;
+  document.getElementById('log-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} ${i.spec ? '('+esc(i.spec)+')' : ''} | 현재가: ${i.price?'₩'+i.price.toLocaleString():'미견적'}`;
   const isMaster = currentUserEmail === 'ink@avention.co.kr';
   document.getElementById('comment-label').textContent = isMaster ? "구매팀 코멘트" : "영업팀 코멘트 (재견적 요청 등)";
   document.getElementById('l-comment').value = '';
   const container = document.getElementById('log-container');
-  if(!i.logs||i.logs.length===0) container.innerHTML='<div style="color:var(--text-tertiary);text-align:center;padding:10px;">이력이 없습니다.</div>';
+  if(!Array.isArray(i.logs) || i.logs.length===0) container.innerHTML='<div style="color:var(--text-tertiary);text-align:center;padding:10px;">이력이 없습니다.</div>';
   else container.innerHTML=i.logs.map(log=>{
     const typeColor = log.type==='quote' ? '#0C447C' : log.type==='comment' ? '#BA7517' : log.type==='result' ? '#27500A' : '#6b6b67';
     return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid var(--border);">
@@ -1085,13 +1089,13 @@ async function submitComment() {
     const isMaster = currentUserEmail === 'ink@avention.co.kr';
     const authorLabel = isMaster ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
     const newStatus = isMaster ? i.status : '대기중'; 
-    i.logs=i.logs||[]; i.logs.push({ date:nowStr(), type:'comment', author:authorLabel, text:commentText });
+    if(!Array.isArray(i.logs)) i.logs = []; i.logs.push({ date:nowStr(), type:'comment', author:authorLabel, text:commentText });
     await db.collection("inquiries").doc(String(logTarget)).update({ logs: i.logs, status: newStatus });
     await db.collection("notifs").add({ id:Date.now(), text:`${authorLabel} → ${i.customer} 코멘트 등록`, time:nowStr(), unread:true });
     const webhookUrl = isMaster ? CONFIG.discordRep : CONFIG.discordBuyer;
     await sendDiscord(webhookUrl, { title:'💬 코멘트가 등록되었습니다', color:0xBA7517, fields:[{name:'담당자',value:i.rep,inline:true},{name:'고객사',value:i.customer,inline:true},{name:'제품명',value:i.product,inline:false},{name:'작성자',value:authorLabel,inline:true},{name:'코멘트',value:commentText,inline:false}], timestamp: new Date().toISOString() });
     closeModal('log-modal'); clearLogForm();
-  } catch(e) { alert("저장 실패: 권한이 없거나 네트워크를 확인해주세요."); } finally { isSubmitting = false; }
+  } catch(e) { alert("저장 실패: 에러가 발생했습니다."); } finally { isSubmitting = false; }
 }
 
 function nowStr() {
