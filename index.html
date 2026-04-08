@@ -1072,7 +1072,10 @@ function openResultModalDirect(id) {
   document.getElementById('result-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} · ${esc(i.spec)||''} | 기존 견적가: ₩${i.price?i.price.toLocaleString():'-'}`;
   document.getElementById('r-price').value = i.price ? i.price.toLocaleString() : ''; 
   document.getElementById('r-result').value = i.result || ''; 
-  document.getElementById('r-memo').value = i.memo || '';
+  
+  // ✅ 수주 결과 입력창은 항상 빈칸으로 노출
+  document.getElementById('r-memo').value = ''; 
+  
   openModal('result-modal'); setTimeout(() => document.getElementById('r-price').focus(), 50); 
 }
 
@@ -1084,14 +1087,20 @@ async function submitResult() {
     const rawPrice = document.getElementById('r-price').value.replace(/,/g, '');
     const finalPrice = parseInt(rawPrice) || i.price; 
     const memoVal = document.getElementById('r-memo').value;
-    i.result = resultVal; i.memo = memoVal; i.price = finalPrice; 
+    
+    i.result = resultVal; 
+    // ✅ 기존 i.memo를 덮어쓰지 않음
+    i.price = finalPrice; 
+    
     if(!Array.isArray(i.logs)) i.logs = [];
     const actor = currentUserEmail === 'ink@avention.co.kr' ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
     let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice?finalPrice.toLocaleString():'-'})` : `❌ 미수주`;
-    if(memoVal) logText += '\n📝 메모: ' + memoVal;
+    
+    // ✅ 작성한 사유는 로그에만 추가
+    if(memoVal) logText += '\n📝 결과 사유: ' + memoVal; 
     i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
     
-    await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, memo:memoVal, logs:i.logs });
+    await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, logs:i.logs });
     syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} [${resultVal}]`, time:nowStr(), unread:true });
     closeModal('result-modal');
@@ -1114,7 +1123,6 @@ function openLogModal(id) {
       
       // ✅ 과거 데이터 호환성 처리: 아직 견적 입력(덮어쓰기) 전인 경우 원본 메모 노출
       if (index === 0 && log.type === 'inquiry' && i.memo && !logText.includes('최초 등록 메모:')) {
-          // 상태가 대기나 확인 중일 때만 i.memo가 영업팀의 원본 메모임
           if (['대기', '대기중', '확인 중'].includes(i.status)) {
               logText += `\n📝 최초 등록 메모: ${i.memo}`;
           }
