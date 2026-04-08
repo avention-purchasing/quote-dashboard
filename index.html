@@ -912,7 +912,6 @@ function renderTable() {
           } else { resultHtml = resultStr ? badgeHtml(resultStr) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
-        // 수정 사항: onclick 제거 및 cursor 속성 제거로 드래그 복사 허용
         return `<tr class="${isChecked ? 'row-selected' : ''}" 
           onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
           onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')">
@@ -995,19 +994,17 @@ function renderAnalytics() {
 
 async function sendDiscord(webhookUrl, embed) { try { await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ embeds:[embed] }) }); } catch(e) {} }
 
-// 수정 사항: submitInquiry 실행 시 메모 값을 로그 타임라인의 text에 포함시킴
 async function submitInquiry(keepOpen = false) {
   if (isSubmitting) return; const rep=document.getElementById('i-rep').value, customer=document.getElementById('i-customer').value.trim(), product=document.getElementById('i-product').value.trim();
   if(!customer||!product) { alert('고객사와 제품명은 필수 입력 항목입니다.'); return; }
   isSubmitting = true;
   try {
     const memoVal = document.getElementById('i-memo').value.trim();
-    // 메모가 있을 경우 최초 등록 로그 텍스트에 포함
     const initialLogText = `최초 견적 문의 등록` + (memoVal ? `\n📝 최초 등록 메모: ${memoVal}` : '');
 
     const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, spec:document.getElementById('i-spec').value.trim(), casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:memoVal, quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text: initialLogText }] };
     await db.collection("inquiries").doc(String(inq.id)).set(inq);
-    syncToSheets(inq); // ✅ 구글 시트 연동
+    syncToSheets(inq); 
     await db.collection("notifs").add({ id:Date.now(), text:`${rep} → 구매: ${customer} ${product} 견적 문의`, time:nowStr(), unread:true });
     const sb=document.getElementById('inq-status'); const st=document.getElementById('inq-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
     await sendDiscord(CONFIG.discordBuyer, { title:'📋 새 견적 문의가 등록됐습니다', color:0xBA7517, fields:[{name:'영업담당자',value:rep,inline:true}, {name:'고객사',value:customer,inline:true}, {name:'제품명',value:product,inline:false}, {name:'Spec',value:inq.spec||'-',inline:true}, {name:'Cat No.',value:inq.partNo||'-',inline:true}, {name:'CAS No.',value:inq.casNo||'-',inline:true}, {name:'Package',value:inq.pkg||'-',inline:true}, {name:'수량',value:inq.qty||'-',inline:true}, {name:'메모',value:inq.memo||'-',inline:false}], timestamp: new Date().toISOString() });
@@ -1022,7 +1019,7 @@ async function markAsChecking(id) {
   i.status = '확인 중'; if(!Array.isArray(i.logs)) i.logs = [];
   i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:'👁️ 구매팀에서 견적 확인/진행 중입니다.' });
   await db.collection("inquiries").doc(String(id)).update({ status:i.status, logs:i.logs });
-  syncToSheets(i); // ✅ 구글 시트 연동
+  syncToSheets(i); 
   await db.collection("notifs").add({ id:Date.now(), text:`구매팀 → ${i.rep}: ${i.customer} 견적 확인 중`, time:nowStr(), unread:true });
 }
 
@@ -1047,7 +1044,7 @@ async function submitQuote() {
     if (qStatus === '견적불가' && newMemo) notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [견적불가: ${newMemo}]`;
     
     await db.collection("inquiries").doc(String(quoteTarget)).update(i);
-    syncToSheets(i); // ✅ 구글 시트 연동
+    syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:notifText, time:nowStr(), unread:true });
     const sb=document.getElementById('quote-status'); const st=document.getElementById('quote-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
     
@@ -1095,13 +1092,13 @@ async function submitResult() {
     i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
     
     await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, memo:memoVal, logs:i.logs });
-    syncToSheets(i); // ✅ 구글 시트 연동
+    syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} [${resultVal}]`, time:nowStr(), unread:true });
     closeModal('result-modal');
   } catch(e) { alert("저장 실패: 에러가 발생했습니다."); } finally { isSubmitting = false; }
 }
 
-// 수정 사항: 기존 데이터에서도 메모가 타임라인 첫번째에 나오도록 호환성 렌더링 추가
+// ✅ 버그 수정이 포함된 함수
 function openLogModal(id) {
   logTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
   document.getElementById('log-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} ${i.spec ? '('+esc(i.spec)+')' : ''} | 현재가: ${i.price?'₩'+i.price.toLocaleString():'미견적'}`;
@@ -1115,10 +1112,15 @@ function openLogModal(id) {
   } else {
     container.innerHTML = i.logs.map((log, index) => {
       let logText = log.text;
-      // 기존 데이터 호환: 첫 번째 로그(inquiry)에 메모 내용이 포함되지 않은 경우 추가 노출
+      
+      // ✅ 버그 수정된 부분: 구매팀 액션(견적/결과)이 있어 메모가 덮어씌워진 경우엔 기존 i.memo를 가져오지 않음
       if (index === 0 && log.type === 'inquiry' && i.memo && !logText.includes('최초 등록 메모:')) {
-          logText += `\n📝 최초 등록 메모: ${i.memo}`;
+          const isMemoOverwritten = i.logs.some(l => l.type === 'quote' || l.type === 'result');
+          if (!isMemoOverwritten) {
+              logText += `\n📝 최초 등록 메모: ${i.memo}`;
+          }
       }
+
       const typeColor = log.type==='quote' ? '#0C447C' : log.type==='comment' ? '#BA7517' : log.type==='result' ? '#27500A' : '#6b6b67';
       return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid var(--border);">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:${typeColor};font-weight:500;font-size:11px;">${esc(log.author||'시스템')}</span><span style="color:var(--text-tertiary);font-size:10px;">${esc(log.date)}</span></div>
@@ -1139,7 +1141,7 @@ async function submitComment() {
     if(!Array.isArray(i.logs)) i.logs = []; i.logs.push({ date:nowStr(), type:'comment', author:authorLabel, text:commentText });
     
     await db.collection("inquiries").doc(String(logTarget)).update({ logs: i.logs, status: newStatus });
-    syncToSheets(i); // ✅ 구글 시트 연동
+    syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:`${authorLabel} → ${i.customer} 코멘트 등록`, time:nowStr(), unread:true });
     const webhookUrl = isMaster ? CONFIG.discordRep : CONFIG.discordBuyer;
     await sendDiscord(webhookUrl, { title:'💬 코멘트가 등록되었습니다', color:0xBA7517, fields:[{name:'담당자',value:i.rep,inline:true},{name:'고객사',value:i.customer,inline:true},{name:'제품명',value:i.product,inline:false},{name:'작성자',value:authorLabel,inline:true},{name:'코멘트',value:commentText,inline:false}], timestamp: new Date().toISOString() });
