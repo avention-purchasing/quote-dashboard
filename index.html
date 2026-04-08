@@ -30,7 +30,7 @@
   }
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  .app { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+  .app { max-width: 1650px; margin: 0 auto; padding: 1.5rem; }
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
 
   .header { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -186,7 +186,7 @@
   </div>
 </div>
 
-<div class="app" id="main-app" style="max-width: 1650px;">
+<div class="app" id="main-app">
   <div class="shell">
     <div class="header">
       <div class="header-left">
@@ -243,7 +243,6 @@
         <input type="date" id="f-end-date" onchange="applyFilters()" style="border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 5px 8px; font-size: 11px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); height: 32px;">
         
         <button class="btn" onclick="resetFilters()" style="padding: 5px 8px; font-size: 11px;">초기화</button>
-
         <span style="flex:1;"></span>
         <span id="table-count" style="font-size:12px;color:var(--text-secondary);"></span>
         <button class="btn" onclick="downloadExcel()" style="display:flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 현재 목록 다운로드</button>
@@ -287,7 +286,7 @@
     <div id="tab-notifications" class="content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap: 10px;">
-          <div class="section-title" style="margin-bottom:0;">알림 내역</div>
+          <div class="section-title" style="margin-bottom:0;">알림 내역 <span style="font-size:11px; font-weight:normal; color:var(--text-tertiary); margin-left:5px;">(최근 50건)</span></div>
           <button class="btn btn-sm" onclick="markAllNotifsRead()" style="padding: 3px 8px; font-size:11px;">모두 읽음</button>
         </div>
         <label id="notif-check-all-label" style="display:none; font-size:12px; cursor:pointer; align-items:center; gap:5px; color:var(--text-secondary);">
@@ -421,12 +420,13 @@
 </div>
 
 <script>
+// ✅ 피드백 연동: 웹앱 주소 정상 연결 (실시간 백업용)
 const CONFIG = {
   repEmails: { 'BML': 'avention@avention.co.kr', 'LSB': 'seungbin@avention.co.kr', 'POL': 'seungbin@avention.co.kr', 'YSJ': 'bio@avention.co.kr' },
   discordBuyer: 'https://discord.com/api/webhooks/1490536970223353947/fzC0wssKrg5FDqkURsh-PUpK7xfJzWNAcDyiFSxsczbQSYCLJGhSewbjeMf0lofc3iLc',
   discordRep:   'https://discord.com/api/webhooks/1490537189795303435/IZH8O3AXoP9vSE3EJc6sNJmM-MMWVjcUL32ufess1JfoX2w1JW9zrN8dv71TWsL-drQa',
   discordExcel: 'https://discordapp.com/api/webhooks/1490887777724923944/H-sk6qYI0pjRoJPQxccJarAsmmKNqD6-RCX_WIARftfWOWmaHihKtldKGDDGVvPUxomK',
-  sheetsUrl: 'https://script.google.com/macros/s/AKfycbzUX87JH06siBmOZ4ajXAxPh7y9DnPd23AN5CMaQe7if6kZywQy4p7OlINSoaihBr-Y/exec'
+  sheetsUrl: 'https://script.google.com/macros/s/AKfycbw5LjGHPe3F7xXiKvOgVQjQDOT1v8yhkL-QljQNzNvDvTJB_tjWLj6o64jZDWNMuzY6yw/exec'
 };
 
 const STATUS_BADGE = { '대기':'b-wait', '대기중':'b-wait', '확인 중':'b-checking', '견적완료':'b-quoted', '수주':'b-won', '미수주':'b-lost', '견적불가':'b-unquotable' };
@@ -461,6 +461,17 @@ function formatPrice(p) {
   const n = Number(String(p).replace(/,/g,''));
   if (isNaN(n) || n === 0) return '-';
   return '₩' + n.toLocaleString();
+}
+
+// ✅ 실시간 엑셀 백업(동기화) 통신 함수
+function syncToSheets(inqData) {
+  if (!CONFIG.sheetsUrl) return;
+  fetch(CONFIG.sheetsUrl, {
+    method: 'POST',
+    mode: 'no-cors', // 백그라운드 강제 송신
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(inqData)
+  }).catch(err => console.error("Sheets Sync Error", err));
 }
 
 function clearInqForm() {
@@ -519,7 +530,7 @@ function startSync() {
     renderAll();
   });
   
-  db.collection("notifs").orderBy("id", "desc").limit(30).onSnapshot(snap => {
+  db.collection("notifs").orderBy("id", "desc").limit(50).onSnapshot(snap => {
     notifs = snap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
     renderNotifs(); updateBadges();
   });
@@ -800,7 +811,6 @@ function renderRepStats() {
   } catch(e) { console.error("RepStats Rendering Error:", e); }
 }
 
-// ✅ 피드백 1: 최근 견적 현황 리스트 (제품명 넓게 CSS 처리)
 function renderRecent() {
   try {
     const list = [...inquiries].sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0)).slice(0,6);
@@ -811,7 +821,6 @@ function renderRecent() {
       const product = String(i.product || '');
       const bKey = STATUS_BADGE[status] || 'b-wait';
       
-      // ✅ 제품명 너비 확장을 위해 인라인 flex & text-overflow 속성 수정
       return `<div class="recent-item">
         <span class="badge ${bKey}">${esc(status)}</span>
         <span style="color:var(--text-secondary);min-width:35px;">${esc(rep)}</span>
@@ -826,22 +835,24 @@ function renderRecent() {
 }
 
 function renderTrend() {
-  if(charts['trend']) charts['trend'].destroy();
-  const months = []; const labels = [];
-  for(let j=5; j>=0; j--) {
-    const d = new Date(); d.setMonth(d.getMonth() - j);
-    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    labels.push(`${d.getMonth()+1}월`);
-  }
-  const data = months.map(mStr => {
-    const dec = inquiries.filter(i=>(i.quoteDate||'').startsWith(mStr)&&['수주','미수주'].includes(i.result||''));
-    const w = dec.filter(i=>(i.result||'')==='수주').length;
-    return dec.length>0?Math.round(w/dec.length*100):null;
-  });
-  charts['trend'] = new Chart(document.getElementById('trend-chart'), {
-    type:'line', data:{labels:labels,datasets:[{label:'수주율',data,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#1D9E75',spanGaps:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
-  });
+  try {
+    if(charts['trend']) charts['trend'].destroy();
+    const months = []; const labels = [];
+    for(let j=5; j>=0; j--) {
+      const d = new Date(); d.setMonth(d.getMonth() - j);
+      months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      labels.push(`${d.getMonth()+1}월`);
+    }
+    const data = months.map(mStr => {
+      const dec = inquiries.filter(i=>(i.quoteDate||'').startsWith(mStr)&&['수주','미수주'].includes(i.result||''));
+      const w = dec.filter(i=>(i.result||'')==='수주').length;
+      return dec.length>0?Math.round(w/dec.length*100):null;
+    });
+    charts['trend'] = new Chart(document.getElementById('trend-chart'), {
+      type:'line', data:{labels:labels,datasets:[{label:'수주율',data,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#1D9E75',spanGaps:true}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+    });
+  } catch(e) { console.error("Trend Render Error:", e); }
 }
 
 function handleSalesResult(selectEl, id) {
@@ -862,18 +873,18 @@ function badgeHtml(status) {
 }
 
 function renderTable() {
-  const isMaster = currentUserEmail === 'ink@avention.co.kr';
-  let list = getFilteredAndSortedInquiries();
-  document.getElementById('table-count').textContent = `총 ${list.length}건`;
-
-  const cols = ['date','rep','customer','partNo','product','spec','casNo','pkg','qty','price','delivery','status'];
-  cols.forEach(c => { const el = document.getElementById('sort-'+c); if(el) el.textContent = sortCol === c ? (sortDesc ? '▼' : '▲') : ''; });
-
-  const totalPages = Math.ceil(list.length / itemsPerPage) || 1;
-  const startIdx = (currentPage - 1) * itemsPerPage;
-  const pagedList = list.slice(startIdx, startIdx + itemsPerPage);
-
   try {
+    const isMaster = currentUserEmail === 'ink@avention.co.kr';
+    let list = getFilteredAndSortedInquiries();
+    document.getElementById('table-count').textContent = `총 ${list.length}건`;
+
+    const cols = ['date','rep','customer','partNo','product','spec','casNo','pkg','qty','price','delivery','status'];
+    cols.forEach(c => { const el = document.getElementById('sort-'+c); if(el) el.textContent = sortCol === c ? (sortDesc ? '▼' : '▲') : ''; });
+
+    const totalPages = Math.ceil(list.length / itemsPerPage) || 1;
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const pagedList = list.slice(startIdx, startIdx + itemsPerPage);
+
     document.getElementById('inq-tbody').innerHTML = pagedList.length ? pagedList.map(i => {
       try {
         const repStr = String(i.rep || '');
@@ -952,7 +963,7 @@ function renderNotifs() {
     const isMaster = currentUserEmail === 'ink@avention.co.kr';
     if(checkAllLabel) checkAllLabel.style.display = isMaster ? 'flex' : 'none';
 
-    el.innerHTML = [...notifs].reverse().map(n => {
+    el.innerHTML = [...notifs].map(n => {
       const isChecked = selectedNotifIds.has(n.docId);
       return `
       <div class="notif-item${n.unread?' unread':''}" id="notif-${n.docId}" style="cursor:pointer; ${isChecked ? 'background:var(--bg-secondary);' : ''}" onclick="if(event.target.tagName!=='INPUT'&&event.target.tagName!=='BUTTON') markNotifRead('${n.docId}')">
@@ -991,6 +1002,7 @@ async function submitInquiry(keepOpen = false) {
   try {
     const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, spec:document.getElementById('i-spec').value.trim(), casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:document.getElementById('i-memo').value.trim(), quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text:`최초 견적 문의 등록` }] };
     await db.collection("inquiries").doc(String(inq.id)).set(inq);
+    syncToSheets(inq); // ✅ 구글 시트 연동
     await db.collection("notifs").add({ id:Date.now(), text:`${rep} → 구매: ${customer} ${product} 견적 문의`, time:nowStr(), unread:true });
     const sb=document.getElementById('inq-status'); const st=document.getElementById('inq-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
     await sendDiscord(CONFIG.discordBuyer, { title:'📋 새 견적 문의가 등록됐습니다', color:0xBA7517, fields:[{name:'영업담당자',value:rep,inline:true}, {name:'고객사',value:customer,inline:true}, {name:'제품명',value:product,inline:false}, {name:'Spec',value:inq.spec||'-',inline:true}, {name:'Cat No.',value:inq.partNo||'-',inline:true}, {name:'CAS No.',value:inq.casNo||'-',inline:true}, {name:'Package',value:inq.pkg||'-',inline:true}, {name:'수량',value:inq.qty||'-',inline:true}, {name:'메모',value:inq.memo||'-',inline:false}], timestamp: new Date().toISOString() });
@@ -1005,6 +1017,7 @@ async function markAsChecking(id) {
   i.status = '확인 중'; if(!Array.isArray(i.logs)) i.logs = [];
   i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:'👁️ 구매팀에서 견적 확인/진행 중입니다.' });
   await db.collection("inquiries").doc(String(id)).update({ status:i.status, logs:i.logs });
+  syncToSheets(i); // ✅ 구글 시트 연동
   await db.collection("notifs").add({ id:Date.now(), text:`구매팀 → ${i.rep}: ${i.customer} 견적 확인 중`, time:nowStr(), unread:true });
 }
 
@@ -1027,10 +1040,27 @@ async function submitQuote() {
     i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:logText });
     let notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [${qStatus}]`;
     if (qStatus === '견적불가' && newMemo) notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [견적불가: ${newMemo}]`;
+    
     await db.collection("inquiries").doc(String(quoteTarget)).update(i);
+    syncToSheets(i); // ✅ 구글 시트 연동
     await db.collection("notifs").add({ id:Date.now(), text:notifText, time:nowStr(), unread:true });
     const sb=document.getElementById('quote-status'); const st=document.getElementById('quote-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
-    await sendDiscord(CONFIG.discordRep, { title: qStatus === '견적불가' ? `🚫 견적 불가` : `📨 견적 완료`, color: qStatus === '견적불가' ? 0x999999 : 0x378ADD, fields:[{name:'담당자',value:i.rep,inline:true},{name:'고객사',value:i.customer,inline:true},{name:'제품명',value:i.product,inline:false},{name:'견적 금액',value:i.price?'₩'+i.price.toLocaleString():'-',inline:true},{name:'공급사',value:i.supplier||'-',inline:true},{name:'납기',value:i.delivery||'-',inline:true}], timestamp: new Date().toISOString() });
+    
+    await sendDiscord(CONFIG.discordRep, { 
+      title: qStatus === '견적불가' ? `🚫 견적 불가` : `📨 견적 완료`, 
+      color: qStatus === '견적불가' ? 0x999999 : 0x378ADD, 
+      fields: [
+        {name:'담당자', value:i.rep, inline:true},
+        {name:'고객사', value:i.customer, inline:true},
+        {name:'제품명', value:i.product, inline:false},
+        {name:'견적 금액', value:i.price ? '₩'+i.price.toLocaleString() : '-', inline:true},
+        {name:'공급사', value:i.supplier||'-', inline:true},
+        {name:'납기', value:i.delivery||'-', inline:true},
+        {name:'메모/사유', value:newMemo||'-', inline:false}
+      ], 
+      timestamp: new Date().toISOString() 
+    });
+    
     st.textContent=`${i.rep}에게 알림 전송 완료!`; setTimeout(()=>{ closeModal('quote-modal'); clearQuoteForm(); isSubmitting = false; }, 1200);
   } catch(e) { alert("저장 실패: 에러가 발생했습니다."); isSubmitting = false; }
 }
@@ -1058,7 +1088,9 @@ async function submitResult() {
     let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice?finalPrice.toLocaleString():'-'})` : `❌ 미수주`;
     if(memoVal) logText += '\n📝 메모: ' + memoVal;
     i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
+    
     await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, memo:memoVal, logs:i.logs });
+    syncToSheets(i); // ✅ 구글 시트 연동
     await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} [${resultVal}]`, time:nowStr(), unread:true });
     closeModal('result-modal');
   } catch(e) { alert("저장 실패: 에러가 발생했습니다."); } finally { isSubmitting = false; }
@@ -1090,7 +1122,9 @@ async function submitComment() {
     const authorLabel = isMaster ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
     const newStatus = isMaster ? i.status : '대기중'; 
     if(!Array.isArray(i.logs)) i.logs = []; i.logs.push({ date:nowStr(), type:'comment', author:authorLabel, text:commentText });
+    
     await db.collection("inquiries").doc(String(logTarget)).update({ logs: i.logs, status: newStatus });
+    syncToSheets(i); // ✅ 구글 시트 연동
     await db.collection("notifs").add({ id:Date.now(), text:`${authorLabel} → ${i.customer} 코멘트 등록`, time:nowStr(), unread:true });
     const webhookUrl = isMaster ? CONFIG.discordRep : CONFIG.discordBuyer;
     await sendDiscord(webhookUrl, { title:'💬 코멘트가 등록되었습니다', color:0xBA7517, fields:[{name:'담당자',value:i.rep,inline:true},{name:'고객사',value:i.customer,inline:true},{name:'제품명',value:i.product,inline:false},{name:'작성자',value:authorLabel,inline:true},{name:'코멘트',value:commentText,inline:false}], timestamp: new Date().toISOString() });
