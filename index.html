@@ -279,7 +279,7 @@
       
       <div class="table-hint">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        행을 클릭하면 이력 모달이 열립니다. 제목을 누르면 정렬됩니다.
+        우측의 [이력] 버튼을 클릭하면 상세 내용 및 코멘트를 확인할 수 있습니다. 제목을 누르면 정렬됩니다.
       </div>
     </div>
 
@@ -912,10 +912,10 @@ function renderTable() {
           } else { resultHtml = resultStr ? badgeHtml(resultStr) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
-        return `<tr class="${isChecked ? 'row-selected' : ''}" style="cursor:pointer;" 
+        // 수정 사항: onclick 제거 및 cursor 속성 제거로 드래그 복사 허용
+        return `<tr class="${isChecked ? 'row-selected' : ''}" 
           onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
-          onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')" 
-          onclick="openLogModal(${i.id})">
+          onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')">
           <td class="check-col" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" ${isMaster ? '' : 'style="display:none;"'} ${isChecked ? 'checked' : ''} onchange="onRowCheck(${i.id}, this.checked)"></td>
           <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.date)}</td>
           <td style="white-space:nowrap;">${esc(repStr)}</td>
@@ -995,12 +995,17 @@ function renderAnalytics() {
 
 async function sendDiscord(webhookUrl, embed) { try { await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ embeds:[embed] }) }); } catch(e) {} }
 
+// 수정 사항: submitInquiry 실행 시 메모 값을 로그 타임라인의 text에 포함시킴
 async function submitInquiry(keepOpen = false) {
   if (isSubmitting) return; const rep=document.getElementById('i-rep').value, customer=document.getElementById('i-customer').value.trim(), product=document.getElementById('i-product').value.trim();
   if(!customer||!product) { alert('고객사와 제품명은 필수 입력 항목입니다.'); return; }
   isSubmitting = true;
   try {
-    const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, spec:document.getElementById('i-spec').value.trim(), casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:document.getElementById('i-memo').value.trim(), quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text:`최초 견적 문의 등록` }] };
+    const memoVal = document.getElementById('i-memo').value.trim();
+    // 메모가 있을 경우 최초 등록 로그 텍스트에 포함
+    const initialLogText = `최초 견적 문의 등록` + (memoVal ? `\n📝 최초 등록 메모: ${memoVal}` : '');
+
+    const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, spec:document.getElementById('i-spec').value.trim(), casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:memoVal, quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text: initialLogText }] };
     await db.collection("inquiries").doc(String(inq.id)).set(inq);
     syncToSheets(inq); // ✅ 구글 시트 연동
     await db.collection("notifs").add({ id:Date.now(), text:`${rep} → 구매: ${customer} ${product} 견적 문의`, time:nowStr(), unread:true });
@@ -1096,20 +1101,30 @@ async function submitResult() {
   } catch(e) { alert("저장 실패: 에러가 발생했습니다."); } finally { isSubmitting = false; }
 }
 
+// 수정 사항: 기존 데이터에서도 메모가 타임라인 첫번째에 나오도록 호환성 렌더링 추가
 function openLogModal(id) {
   logTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
   document.getElementById('log-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} ${i.spec ? '('+esc(i.spec)+')' : ''} | 현재가: ${i.price?'₩'+i.price.toLocaleString():'미견적'}`;
   const isMaster = currentUserEmail === 'ink@avention.co.kr';
   document.getElementById('comment-label').textContent = isMaster ? "구매팀 코멘트" : "영업팀 코멘트 (재견적 요청 등)";
   document.getElementById('l-comment').value = '';
+  
   const container = document.getElementById('log-container');
-  if(!Array.isArray(i.logs) || i.logs.length===0) container.innerHTML='<div style="color:var(--text-tertiary);text-align:center;padding:10px;">이력이 없습니다.</div>';
-  else container.innerHTML=i.logs.map(log=>{
-    const typeColor = log.type==='quote' ? '#0C447C' : log.type==='comment' ? '#BA7517' : log.type==='result' ? '#27500A' : '#6b6b67';
-    return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:${typeColor};font-weight:500;font-size:11px;">${esc(log.author||'시스템')}</span><span style="color:var(--text-tertiary);font-size:10px;">${esc(log.date)}</span></div>
-      <div style="white-space:pre-wrap;line-height:1.5;font-size:12px;">${esc(log.text)}</div></div>`;
-  }).join('');
+  if(!Array.isArray(i.logs) || i.logs.length===0) {
+    container.innerHTML='<div style="color:var(--text-tertiary);text-align:center;padding:10px;">이력이 없습니다.</div>';
+  } else {
+    container.innerHTML = i.logs.map((log, index) => {
+      let logText = log.text;
+      // 기존 데이터 호환: 첫 번째 로그(inquiry)에 메모 내용이 포함되지 않은 경우 추가 노출
+      if (index === 0 && log.type === 'inquiry' && i.memo && !logText.includes('최초 등록 메모:')) {
+          logText += `\n📝 최초 등록 메모: ${i.memo}`;
+      }
+      const typeColor = log.type==='quote' ? '#0C447C' : log.type==='comment' ? '#BA7517' : log.type==='result' ? '#27500A' : '#6b6b67';
+      return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:${typeColor};font-weight:500;font-size:11px;">${esc(log.author||'시스템')}</span><span style="color:var(--text-tertiary);font-size:10px;">${esc(log.date)}</span></div>
+        <div style="white-space:pre-wrap;line-height:1.5;font-size:12px;">${esc(logText)}</div></div>`;
+    }).join('');
+  }
   openModal('log-modal'); setTimeout(() => document.getElementById('l-comment').focus(), 50); 
 }
 
