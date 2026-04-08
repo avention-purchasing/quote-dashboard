@@ -381,6 +381,16 @@
         <label>최종 판매가 (원) <span style="color:var(--text-tertiary); font-weight:normal;">(조정 시 수정하세요)</span></label>
         <input id="r-price" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitResult)">
       </div>
+      <div class="form-grid" style="margin-top:12px; margin-bottom:0;">
+        <div class="fg">
+          <label>최종 Package</label>
+          <input id="r-pkg" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, submitResult)">
+        </div>
+        <div class="fg">
+          <label>최종 수량</label>
+          <input id="r-qty" type="text" placeholder="수량" onkeydown="checkEnter(event, submitResult)">
+        </div>
+      </div>
       <div class="fg" style="margin-top:12px;">
         <label>수주 결과</label>
         <select id="r-result" onkeydown="checkEnter(event, submitResult)">
@@ -1073,7 +1083,10 @@ function openResultModalDirect(id) {
   document.getElementById('r-price').value = i.price ? i.price.toLocaleString() : ''; 
   document.getElementById('r-result').value = i.result || ''; 
   
-  // ✅ 수주 결과 입력창은 항상 빈칸으로 노출
+  // ✅ 1. Package와 수량 기존 데이터로 미리 채우기
+  document.getElementById('r-pkg').value = i.pkg || '';
+  document.getElementById('r-qty').value = i.qty || '';
+  
   document.getElementById('r-memo').value = ''; 
   
   openModal('result-modal'); setTimeout(() => document.getElementById('r-price').focus(), 50); 
@@ -1088,19 +1101,26 @@ async function submitResult() {
     const finalPrice = parseInt(rawPrice) || i.price; 
     const memoVal = document.getElementById('r-memo').value;
     
+    // ✅ 2. 입력된 Package와 수량 가져오기
+    const finalPkg = document.getElementById('r-pkg').value.trim();
+    const finalQty = document.getElementById('r-qty').value.trim();
+    
     i.result = resultVal; 
-    // ✅ 기존 i.memo를 덮어쓰지 않음
     i.price = finalPrice; 
+    i.pkg = finalPkg; // 데이터에 반영
+    i.qty = finalQty; // 데이터에 반영
     
     if(!Array.isArray(i.logs)) i.logs = [];
     const actor = currentUserEmail === 'ink@avention.co.kr' ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
-    let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice?finalPrice.toLocaleString():'-'})` : `❌ 미수주`;
     
-    // ✅ 작성한 사유는 로그에만 추가
+    // ✅ 3. 수주 확정 로그에 갱신된 수량/패키지 기록 포함
+    let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice?finalPrice.toLocaleString():'-'} / ${finalPkg||'-'} × ${finalQty||'-'})` : `❌ 미수주`;
+    
     if(memoVal) logText += '\n📝 결과 사유: ' + memoVal; 
     i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
     
-    await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, logs:i.logs });
+    // DB 업데이트
+    await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, pkg:finalPkg, qty:finalQty, logs:i.logs });
     syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} [${resultVal}]`, time:nowStr(), unread:true });
     closeModal('result-modal');
@@ -1121,7 +1141,6 @@ function openLogModal(id) {
     container.innerHTML = i.logs.map((log, index) => {
       let logText = log.text;
       
-      // ✅ 과거 데이터 호환성 처리: 아직 견적 입력(덮어쓰기) 전인 경우 원본 메모 노출
       if (index === 0 && log.type === 'inquiry' && i.memo && !logText.includes('최초 등록 메모:')) {
           if (['대기', '대기중', '확인 중'].includes(i.status)) {
               logText += `\n📝 최초 등록 메모: ${i.memo}`;
