@@ -325,15 +325,15 @@
     <div class="modal-head"><h2>신규 견적 문의 등록</h2><button class="x-btn" onclick="closeModal('inq-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="fg"><label>영업담당자</label><select id="i-rep" onkeydown="checkEnter(event, () => submitInquiry(false))"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
-        <div class="fg"><label>고객사 <span style="color:#E24B4A">*</span></label><input id="i-customer" type="text" placeholder="고객사명" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg"><label>Cat No.</label><input id="i-partno" type="text" placeholder="예: G7513" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg"><label>제품명 <span style="color:#E24B4A">*</span></label><input id="i-product" type="text" placeholder="제품명" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg"><label>Spec</label><input id="i-spec" type="text" placeholder="Spec" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg"><label>CAS No.</label><input id="i-casno" type="text" placeholder="예: 67-68-5" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg"><label>Package</label><input id="i-pkg" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg"><label>수량</label><input id="i-qty" type="text" placeholder="수량" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg form-full"><label>메모</label><input id="i-memo" type="text" placeholder="요청사항 등" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>영업담당자</label><select id="i-rep" style="width: 100%;" onkeydown="checkEnter(event, () => submitInquiry(false))"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
+        <div class="fg"><label>고객사 <span style="color:#E24B4A">*</span></label><input id="i-customer" style="width: 100%;" type="text" placeholder="고객사명" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>Cat No.</label><input id="i-partno" style="width: 100%;" type="text" placeholder="예: G7513" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>제품명 <span style="color:#E24B4A">*</span></label><input id="i-product" style="width: 100%;" type="text" placeholder="제품명" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>Spec</label><input id="i-spec" style="width: 100%;" type="text" placeholder="Spec" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>CAS No.</label><input id="i-casno" style="width: 100%;" type="text" placeholder="예: 67-68-5" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>Package</label><input id="i-pkg" style="width: 100%;" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>수량</label><input id="i-qty" style="width: 100%;" type="text" placeholder="수량" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg form-full"><label>메모</label><input id="i-memo" style="width: 100%;" type="text" placeholder="요청사항 등" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
       </div>
       <div id="inq-status" class="status-banner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
@@ -354,11 +354,11 @@
     <div class="modal-body">
       <div class="info-box" id="quote-info"></div>
       <div class="form-grid">
-        <div class="fg"><label>견적 금액 (원)</label><input id="q-price" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitQuote)"></div>
-        <div class="fg"><label>예상 납기</label><input id="q-delivery" type="text" placeholder="예: 2~3주, 1달 등" onkeydown="checkEnter(event, submitQuote)"></div>
-        <div class="fg"><label>공급사</label><input id="q-supplier" type="text" placeholder="공급사명" onkeydown="checkEnter(event, submitQuote)"></div>
-        <div class="fg"><label>처리 상태</label><select id="q-status"><option value="견적완료">정상 견적</option><option value="견적불가">견적 불가</option></select></div>
-        <div class="fg form-full"><label>메모</label><textarea id="q-memo" placeholder="사유 또는 특이사항"></textarea></div>
+        <div class="fg"><label>견적 금액 (원)</label><input id="q-price" style="width: 100%;" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitQuote)"></div>
+        <div class="fg"><label>예상 납기</label><input id="q-delivery" style="width: 100%;" type="text" placeholder="예: 2~3주, 1달 등" onkeydown="checkEnter(event, submitQuote)"></div>
+        <div class="fg"><label>공급사</label><input id="q-supplier" style="width: 100%;" type="text" placeholder="공급사명" onkeydown="checkEnter(event, submitQuote)"></div>
+        <div class="fg"><label>처리 상태</label><select id="q-status" style="width: 100%;"><option value="견적완료">정상 견적</option><option value="견적불가">견적 불가</option></select></div>
+        <div class="fg form-full"><label>메모</label><textarea id="q-memo" style="width: 100%;" placeholder="사유 또는 특이사항"></textarea></div>
       </div>
       <div id="quote-status" class="status-banner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
@@ -379,21 +379,21 @@
       <div class="info-box" id="result-info"></div>
       <div class="fg" style="margin-top:12px;">
         <label>최종 판매가 (원) <span style="color:var(--text-tertiary); font-weight:normal;">(조정 시 수정하세요)</span></label>
-        <input id="r-price" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitResult)">
+        <input id="r-price" style="width: 100%;" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitResult)">
       </div>
       <div class="form-grid" style="margin-top:12px; margin-bottom:0;">
         <div class="fg">
           <label>최종 Package</label>
-          <input id="r-pkg" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, submitResult)">
+          <input id="r-pkg" style="width: 100%;" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, submitResult)">
         </div>
         <div class="fg">
           <label>최종 수량</label>
-          <input id="r-qty" type="text" placeholder="수량" onkeydown="checkEnter(event, submitResult)">
+          <input id="r-qty" style="width: 100%;" type="text" placeholder="수량" onkeydown="checkEnter(event, submitResult)">
         </div>
       </div>
       <div class="fg" style="margin-top:12px;">
         <label>수주 결과</label>
-        <select id="r-result" onkeydown="checkEnter(event, submitResult)">
+        <select id="r-result" style="width: 100%;" onkeydown="checkEnter(event, submitResult)">
           <option value="">결과 선택</option>
           <option value="수주">수주</option>
           <option value="미수주">미수주</option>
@@ -401,7 +401,7 @@
       </div>
       <div class="fg" style="margin-top:12px;">
         <label>메모 (선택)</label>
-        <textarea id="r-memo" placeholder="미수주 사유 등"></textarea>
+        <textarea id="r-memo" style="width: 100%;" placeholder="미수주 사유 등"></textarea>
       </div>
     </div>
     <div class="modal-foot">
@@ -419,7 +419,7 @@
       <div id="log-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; font-size: 12px; background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-md);"></div>
       <div class="fg form-full">
         <label id="comment-label">영업팀 코멘트 (재견적 요청 등)</label>
-        <textarea id="l-comment" placeholder="메모나 코멘트를 남겨주세요."></textarea>
+        <textarea id="l-comment" style="width: 100%;" placeholder="메모나 코멘트를 남겨주세요."></textarea>
       </div>
     </div>
     <div class="modal-foot">
@@ -906,8 +906,10 @@ function renderTable() {
         const hasComment = Array.isArray(i.logs) && i.logs.some(l => l && l.type === 'comment');
         const isChecked = selectedIds.has(i.id);
         
+        // ✅ 수정된 부분: 💬 말풍선 아이콘 완전히 제거하여 액션 열 줄 맞춤
         let actionBtns = ''; const logStyle = hasComment ? 'act-amber' : '';
-        actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">${hasComment ? '💬 이력' : '이력'}</button>`;
+        actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">이력</button>`;
+        
         if (isMaster) {
           if (['대기','대기중'].includes(statusStr)) actionBtns += `<button class="act-btn act-blue" onclick="event.stopPropagation(); markAsChecking(${i.id})">진행</button>`;
           if (['대기','대기중','확인 중'].includes(statusStr)) actionBtns += `<button class="act-btn act-green" onclick="event.stopPropagation(); openQuoteModal(${i.id})">견적입력</button>`;
@@ -1083,7 +1085,6 @@ function openResultModalDirect(id) {
   document.getElementById('r-price').value = i.price ? i.price.toLocaleString() : ''; 
   document.getElementById('r-result').value = i.result || ''; 
   
-  // ✅ 1. Package와 수량 기존 데이터로 미리 채우기
   document.getElementById('r-pkg').value = i.pkg || '';
   document.getElementById('r-qty').value = i.qty || '';
   
@@ -1101,25 +1102,22 @@ async function submitResult() {
     const finalPrice = parseInt(rawPrice) || i.price; 
     const memoVal = document.getElementById('r-memo').value;
     
-    // ✅ 2. 입력된 Package와 수량 가져오기
     const finalPkg = document.getElementById('r-pkg').value.trim();
     const finalQty = document.getElementById('r-qty').value.trim();
     
     i.result = resultVal; 
     i.price = finalPrice; 
-    i.pkg = finalPkg; // 데이터에 반영
-    i.qty = finalQty; // 데이터에 반영
+    i.pkg = finalPkg; 
+    i.qty = finalQty; 
     
     if(!Array.isArray(i.logs)) i.logs = [];
     const actor = currentUserEmail === 'ink@avention.co.kr' ? '구매팀 (ink)' : `영업팀 (${i.rep})`;
     
-    // ✅ 3. 수주 확정 로그에 갱신된 수량/패키지 기록 포함
     let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice?finalPrice.toLocaleString():'-'} / ${finalPkg||'-'} × ${finalQty||'-'})` : `❌ 미수주`;
     
     if(memoVal) logText += '\n📝 결과 사유: ' + memoVal; 
     i.logs.push({ date:nowStr(), type:'result', author:actor, text:logText });
     
-    // DB 업데이트
     await db.collection("inquiries").doc(String(resultTarget)).update({ result:resultVal, price:finalPrice, pkg:finalPkg, qty:finalQty, logs:i.logs });
     syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:`수주결과 등록 → ${i.rep}: ${i.customer} [${resultVal}]`, time:nowStr(), unread:true });
