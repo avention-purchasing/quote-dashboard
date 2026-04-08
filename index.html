@@ -1112,9 +1112,10 @@ function openLogModal(id) {
     container.innerHTML = i.logs.map((log, index) => {
       let logText = log.text;
       
+      // ✅ 과거 데이터 호환성 처리: 아직 견적 입력(덮어쓰기) 전인 경우 원본 메모 노출
       if (index === 0 && log.type === 'inquiry' && i.memo && !logText.includes('최초 등록 메모:')) {
-          const isMemoOverwritten = i.logs.some(l => l.type === 'quote' || l.type === 'result');
-          if (!isMemoOverwritten) {
+          // 상태가 대기나 확인 중일 때만 i.memo가 영업팀의 원본 메모임
+          if (['대기', '대기중', '확인 중'].includes(i.status)) {
               logText += `\n📝 최초 등록 메모: ${i.memo}`;
           }
       }
