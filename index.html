@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>견적 수주율 관리 대시보드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -30,7 +31,10 @@
   }
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  .app { max-width: 1650px; margin: 0 auto; padding: 1.5rem; }
+  
+  /* ✅ 수정된 부분: 늘어난 열을 위해 최대 너비를 1650px에서 1850px로 넓힘 */
+  .app { max-width: 1850px; margin: 0 auto; padding: 1.5rem; }
+  
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
 
   .header { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -270,6 +274,7 @@
             <th style="cursor:pointer;" onclick="setSort('price')">금액 <span id="sort-price"></span></th>
             <th style="cursor:pointer;" onclick="setSort('delivery')">납기 <span id="sort-delivery"></span></th>
             <th style="cursor:pointer;" onclick="setSort('status')">상태 <span id="sort-status"></span></th>
+            <th style="cursor:pointer;" onclick="setSort('endUser')">엔드유저 <span id="sort-endUser"></span></th>
             <th>메모</th><th>액션</th><th>결과</th>
           </tr></thead>
           <tbody id="inq-tbody"></tbody>
@@ -314,8 +319,16 @@
           <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="result-chart"></canvas></div></div>
         </div>
       </div>
-      <div class="section-title">담당자별 수주율 비교</div>
-      <div class="card card-pad"><div class="chart-wrap" style="height:200px;"><canvas id="rate-chart"></canvas></div></div>
+      <div class="two-col">
+        <div>
+          <div class="section-title">담당자별 수주 총금액</div>
+          <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="amt-chart"></canvas></div></div>
+        </div>
+        <div>
+          <div class="section-title">담당자별 수주율 비교</div>
+          <div class="card card-pad"><div class="chart-wrap" style="height:220px;"><canvas id="rate-chart"></canvas></div></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -333,7 +346,8 @@
         <div class="fg"><label>CAS No.</label><input id="i-casno" style="width: 100%;" type="text" placeholder="예: 67-68-5" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
         <div class="fg"><label>Package</label><input id="i-pkg" style="width: 100%;" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
         <div class="fg"><label>수량</label><input id="i-qty" style="width: 100%;" type="text" placeholder="수량" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
-        <div class="fg form-full"><label>메모</label><input id="i-memo" style="width: 100%;" type="text" placeholder="요청사항 등" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>엔드유저</label><input id="i-enduser" style="width: 100%;" type="text" placeholder="엔드유저명" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
+        <div class="fg"><label>메모</label><input id="i-memo" style="width: 100%;" type="text" placeholder="요청사항 등" onkeydown="checkEnter(event, () => submitInquiry(false))"></div>
       </div>
       <div id="inq-status" class="status-banner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7L12 13 2 7"/></svg>
@@ -384,11 +398,11 @@
       <div class="form-grid" style="margin-top:12px; margin-bottom:0;">
         <div class="fg">
           <label>최종 Package</label>
-          <input id="r-pkg" style="width: 100%;" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, submitResult)">
+          <input id="r-pkg" style="width: 100%; box-sizing: border-box;" type="text" placeholder="예: 500mL, 1g" onkeydown="checkEnter(event, submitResult)">
         </div>
         <div class="fg">
           <label>최종 수량</label>
-          <input id="r-qty" style="width: 100%;" type="text" placeholder="수량" onkeydown="checkEnter(event, submitResult)">
+          <input id="r-qty" style="width: 100%; box-sizing: border-box;" type="text" placeholder="수량" onkeydown="checkEnter(event, submitResult)">
         </div>
       </div>
       <div class="fg" style="margin-top:12px;">
@@ -488,7 +502,9 @@ function clearInqForm() {
   document.getElementById('i-customer').value=''; document.getElementById('i-partno').value='';
   document.getElementById('i-product').value=''; document.getElementById('i-spec').value='';
   document.getElementById('i-casno').value=''; document.getElementById('i-pkg').value='';
-  document.getElementById('i-qty').value=''; document.getElementById('i-memo').value='';
+  document.getElementById('i-qty').value=''; 
+  document.getElementById('i-enduser').value=''; 
+  document.getElementById('i-memo').value='';
 }
 function clearQuoteForm() {
   document.getElementById('q-price').value=''; document.getElementById('q-delivery').value='';
@@ -609,6 +625,7 @@ function getFilteredAndSortedInquiries() {
               !String(i.spec||'').toLowerCase().includes(q) &&
               !String(i.partNo||'').toLowerCase().includes(q) &&
               !String(i.casNo||'').toLowerCase().includes(q) &&
+              !String(i.endUser||'').toLowerCase().includes(q) &&
               !String(i.memo||'').toLowerCase().includes(q)) return false;
       
       if(sd && i.date < sd) return false;
@@ -888,7 +905,8 @@ function renderTable() {
     let list = getFilteredAndSortedInquiries();
     document.getElementById('table-count').textContent = `총 ${list.length}건`;
 
-    const cols = ['date','rep','customer','partNo','product','spec','casNo','pkg','qty','price','delivery','status'];
+    // ✅ cols 배열에 endUser 추가
+    const cols = ['date','rep','customer','partNo','product','spec','casNo','pkg','qty','price','delivery','status','endUser'];
     cols.forEach(c => { const el = document.getElementById('sort-'+c); if(el) el.textContent = sortCol === c ? (sortDesc ? '▼' : '▲') : ''; });
 
     const totalPages = Math.ceil(list.length / itemsPerPage) || 1;
@@ -903,12 +921,9 @@ function renderTable() {
         const prodStr = String(i.product || '');
         
         const isOwner = isMaster || (CONFIG.repEmails[repStr] && CONFIG.repEmails[repStr].toLowerCase() === currentUserEmail);
-        const hasComment = Array.isArray(i.logs) && i.logs.some(l => l && l.type === 'comment');
         const isChecked = selectedIds.has(i.id);
         
-        // ✅ 수정된 부분: 💬 말풍선 아이콘 완전히 제거하여 액션 열 줄 맞춤
-        let actionBtns = ''; const logStyle = hasComment ? 'act-amber' : '';
-        actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">이력</button>`;
+        let actionBtns = `<button class="act-btn" onclick="event.stopPropagation(); openLogModal(${i.id})">이력</button>`;
         
         if (isMaster) {
           if (['대기','대기중'].includes(statusStr)) actionBtns += `<button class="act-btn act-blue" onclick="event.stopPropagation(); markAsChecking(${i.id})">진행</button>`;
@@ -924,6 +939,7 @@ function renderTable() {
           } else { resultHtml = resultStr ? badgeHtml(resultStr) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
+        // ✅ 수정된 부분: 메모(memo) 열 바로 앞에 엔드유저(endUser) 열 데이터 추가
         return `<tr class="${isChecked ? 'row-selected' : ''}" 
           onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
           onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')">
@@ -940,15 +956,18 @@ function renderTable() {
           <td style="font-size:12px;white-space:nowrap;font-weight:500;">${formatPrice(i.price)}</td>
           <td style="font-size:12px;white-space:nowrap;">${esc(i.delivery)||'-'}</td>
           <td style="white-space:nowrap;">${badgeHtml(statusStr)}</td>
+          <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.endUser)||'-'}</td>
           <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);" title="${esc(i.memo)}">${esc(i.memo)||'-'}</td>
           <td onclick="event.stopPropagation();"><div class="action-group">${actionBtns}</div></td>
           <td onclick="event.stopPropagation();" style="white-space:nowrap; text-align:center;">${resultHtml}</td>
         </tr>`;
       } catch(mapErr) {
         console.error("Row Mapping Error:", mapErr);
-        return `<tr><td colspan="16" style="color:red; text-align:center; font-size:12px;">이 데이터를 렌더링할 수 없습니다. (ID: ${i.id})</td></tr>`;
+        // ✅ 오류 메시지도 17칸으로 늘림
+        return `<tr><td colspan="17" style="color:red; text-align:center; font-size:12px;">이 데이터를 렌더링할 수 없습니다. (ID: ${i.id})</td></tr>`;
       }
-    }).join('') : '<tr><td colspan="16" class="empty">해당하는 항목 없음</td></tr>';
+      // ✅ 데이터 없음 메시지도 17칸으로 늘림
+    }).join('') : '<tr><td colspan="17" class="empty">해당하는 항목 없음</td></tr>';
 
     let pageHtml = '';
     if (totalPages > 1) {
@@ -963,7 +982,8 @@ function renderTable() {
     
   } catch(e) {
     console.error("Table Rendering Crash:", e);
-    document.getElementById('inq-tbody').innerHTML = `<tr><td colspan="16" style="color:red; padding:2rem; text-align:center;">데이터를 불러오는 중 시스템 에러가 발생했습니다.<br><br>오류내용: ${e.message}</td></tr>`;
+    // ✅ 오류 메시지도 17칸으로 늘림
+    document.getElementById('inq-tbody').innerHTML = `<tr><td colspan="17" style="color:red; padding:2rem; text-align:center;">데이터를 불러오는 중 시스템 에러가 발생했습니다.<br><br>오류내용: ${e.message}</td></tr>`;
   }
 }
 
@@ -994,13 +1014,77 @@ function renderNotifs() {
 
 function renderAnalytics() {
   try {
-    ['rep-chart','result-chart','rate-chart'].forEach(id=>{if(charts[id])charts[id].destroy();});
+    ['rep-chart','result-chart','rate-chart','amt-chart'].forEach(id=>{if(charts[id])charts[id].destroy();});
     const reps = ['BML','LSB','POL','YSJ'];
-    charts['rep-chart'] = new Chart(document.getElementById('rep-chart'),{ type:'doughnut', data:{labels:reps,datasets:[{data:reps.map(r=>inquiries.filter(i=>(i.rep||'')===r&&(i.result||'')==='수주').length),backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}} });
+    const repColors = ['#378ADD','#1D9E75','#D85A30','#7F77DD'];
+    
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+
+    const repCounts = reps.map(r=>inquiries.filter(i=>(i.rep||'')===r&&(i.result||'')==='수주').length);
+    charts['rep-chart'] = new Chart(document.getElementById('rep-chart'),{ 
+        type:'doughnut', 
+        data:{labels:reps, datasets:[{data:repCounts, backgroundColor:repColors}]}, 
+        options:{
+            responsive:true, maintainAspectRatio:false, 
+            plugins:{
+                legend:{position:'bottom'},
+                datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v + '건' : '' }
+            }
+        } 
+    });
+
     const won=inquiries.filter(i=>(i.result||'')==='수주').length, lost=inquiries.filter(i=>(i.result||'')==='미수주').length, quoted=inquiries.filter(i=>(i.status||'')==='견적완료'&&!i.result).length, wait=inquiries.filter(i=>['대기','대기중','확인 중'].includes(i.status||'')).length, unquotable=inquiries.filter(i=>(i.status||'')==='견적불가').length;
-    charts['result-chart'] = new Chart(document.getElementById('result-chart'),{ type:'bar', data:{labels:['수주','미수주','견적완료','대기/확인 중','견적불가'],datasets:[{data:[won,lost,quoted,wait,unquotable],backgroundColor:['#639922','#E24B4A','#378ADD','#BA7517','#999999']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}} });
+    charts['result-chart'] = new Chart(document.getElementById('result-chart'),{ 
+        type:'bar', 
+        data:{labels:['수주','미수주','견적완료','대기/확인 중','견적불가'],datasets:[{data:[won,lost,quoted,wait,unquotable],backgroundColor:['#639922','#E24B4A','#378ADD','#BA7517','#999999']}]}, 
+        options:{
+            responsive:true, maintainAspectRatio:false, 
+            plugins:{
+                legend:{display:false},
+                datalabels: { anchor: 'end', align: 'top', color: '#6b6b67', font: { weight: 'bold' }, formatter: v => v > 0 ? v + '건' : '' }
+            },
+            scales: { y: { beginAtZero: true, grace: '20%' } }
+        } 
+    });
+
+    const amts = reps.map(r => inquiries.filter(i=>(i.rep||'')===r&&(i.result||'')==='수주').reduce((sum, i) => sum + (Number(String(i.price).replace(/,/g, '')) || 0), 0));
+    charts['amt-chart'] = new Chart(document.getElementById('amt-chart'),{
+        type: 'bar',
+        data: {labels: reps, datasets: [{data: amts, backgroundColor: repColors}]},
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins: {
+                legend: {display: false},
+                datalabels: { 
+                    anchor: 'end', align: 'top', color: '#6b6b67', font: { weight: 'bold', size: 10 }, 
+                    formatter: v => v > 0 ? '₩' + (v >= 10000 ? Math.floor(v/10000).toLocaleString() + '만' : v.toLocaleString()) : '' 
+                }
+            },
+            scales: { 
+                y: { 
+                    beginAtZero: true, grace: '20%', 
+                    ticks: { callback: v => v >= 10000 ? Math.floor(v/10000).toLocaleString() + '만' : v.toLocaleString() } 
+                } 
+            }
+        }
+    });
+
     const rates = reps.map(r=>{ const dec=inquiries.filter(i=>(i.rep||'')===r&&['수주','미수주'].includes(i.result||'')); const w=inquiries.filter(i=>(i.rep||'')===r&&(i.result||'')==='수주').length; return dec.length>0?Math.round(w/dec.length*100):0; });
-    charts['rate-chart'] = new Chart(document.getElementById('rate-chart'),{ type:'bar', data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:['#378ADD','#1D9E75','#D85A30','#7F77DD']}]}, options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100}}} });
+    charts['rate-chart'] = new Chart(document.getElementById('rate-chart'),{ 
+        type:'bar', 
+        data:{labels:reps,datasets:[{label:'수주율(%)',data:rates,backgroundColor:repColors}]}, 
+        options:{
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{display:false},
+                datalabels: { anchor: 'end', align: 'right', color: '#6b6b67', font: { weight: 'bold' }, formatter: v => v > 0 ? v + '%' : '' }
+            },
+            scales:{x:{min:0,max:100, grace: '10%'}}
+        } 
+    });
+
   } catch(e) { console.error("Chart Render Error:", e); }
 }
 
@@ -1011,17 +1095,22 @@ async function submitInquiry(keepOpen = false) {
   if(!customer||!product) { alert('고객사와 제품명은 필수 입력 항목입니다.'); return; }
   isSubmitting = true;
   try {
+    const endUserVal = document.getElementById('i-enduser').value.trim();
     const memoVal = document.getElementById('i-memo').value.trim();
-    const initialLogText = `최초 견적 문의 등록` + (memoVal ? `\n📝 최초 등록 메모: ${memoVal}` : '');
+    
+    const initialLogText = `최초 견적 문의 등록` + (endUserVal ? `\n🏢 엔드유저: ${endUserVal}` : '') + (memoVal ? `\n📝 최초 등록 메모: ${memoVal}` : '');
 
-    const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, partNo:document.getElementById('i-partno').value.trim(), product, spec:document.getElementById('i-spec').value.trim(), casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:memoVal, quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text: initialLogText }] };
+    const inq = { id:nextId++, date:new Date().toISOString().slice(0,10), rep, customer, endUser:endUserVal, partNo:document.getElementById('i-partno').value.trim(), product, spec:document.getElementById('i-spec').value.trim(), casNo:document.getElementById('i-casno').value.trim(), pkg:document.getElementById('i-pkg').value.trim(), qty:document.getElementById('i-qty').value.trim(), status:'대기', price:null, supplier:'', delivery:'', memo:memoVal, quoteDate:null, logs:[{ date:nowStr(), type:'inquiry', author:`영업팀 (${rep})`, text: initialLogText }] };
+    
     await db.collection("inquiries").doc(String(inq.id)).set(inq);
     syncToSheets(inq); 
     await db.collection("notifs").add({ id:Date.now(), text:`${rep} → 구매: ${customer} ${product} 견적 문의`, time:nowStr(), unread:true });
     const sb=document.getElementById('inq-status'); const st=document.getElementById('inq-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
-    await sendDiscord(CONFIG.discordBuyer, { title:'📋 새 견적 문의가 등록됐습니다', color:0xBA7517, fields:[{name:'영업담당자',value:rep,inline:true}, {name:'고객사',value:customer,inline:true}, {name:'제품명',value:product,inline:false}, {name:'Spec',value:inq.spec||'-',inline:true}, {name:'Cat No.',value:inq.partNo||'-',inline:true}, {name:'CAS No.',value:inq.casNo||'-',inline:true}, {name:'Package',value:inq.pkg||'-',inline:true}, {name:'수량',value:inq.qty||'-',inline:true}, {name:'메모',value:inq.memo||'-',inline:false}], timestamp: new Date().toISOString() });
+    
+    await sendDiscord(CONFIG.discordBuyer, { title:'📋 새 견적 문의가 등록됐습니다', color:0xBA7517, fields:[{name:'영업담당자',value:rep,inline:true}, {name:'고객사',value:customer,inline:true}, {name:'엔드유저',value:inq.endUser||'-',inline:true}, {name:'제품명',value:product,inline:false}, {name:'Spec',value:inq.spec||'-',inline:true}, {name:'Cat No.',value:inq.partNo||'-',inline:true}, {name:'CAS No.',value:inq.casNo||'-',inline:true}, {name:'Package',value:inq.pkg||'-',inline:true}, {name:'수량',value:inq.qty||'-',inline:true}, {name:'메모',value:inq.memo||'-',inline:false}], timestamp: new Date().toISOString() });
+    
     st.textContent='성공적으로 등록되었습니다!'; 
-    if(keepOpen) { setTimeout(() => { sb.classList.remove('show'); document.getElementById('i-partno').value = ''; document.getElementById('i-product').value = ''; document.getElementById('i-spec').value = ''; document.getElementById('i-casno').value = ''; document.getElementById('i-pkg').value = ''; document.getElementById('i-qty').value = ''; document.getElementById('i-memo').value = ''; isSubmitting = false; document.getElementById('i-product').focus(); }, 1200); }
+    if(keepOpen) { setTimeout(() => { sb.classList.remove('show'); document.getElementById('i-partno').value = ''; document.getElementById('i-product').value = ''; document.getElementById('i-spec').value = ''; document.getElementById('i-casno').value = ''; document.getElementById('i-pkg').value = ''; document.getElementById('i-qty').value = ''; document.getElementById('i-enduser').value = ''; document.getElementById('i-memo').value = ''; isSubmitting = false; document.getElementById('i-product').focus(); }, 1200); }
     else { setTimeout(()=>{ closeModal('inq-modal'); clearInqForm(); isSubmitting = false; }, 1200); }
   } catch(e) { alert("저장 실패: 오류가 발생했습니다. 권한을 확인해주세요."); isSubmitting = false; }
 }
@@ -1182,7 +1271,7 @@ function nowStr() {
 function downloadExcel() {
   const filteredList = getFilteredAndSortedInquiries(); const today = new Date();
   const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-  const exportData = filteredList.map(i => ({ '문의일': i.date, '담당자': i.rep, '고객사': i.customer, 'Cat No.': i.partNo||'', '제품명': i.product, 'Spec': i.spec||'', 'CAS No.': i.casNo||'', 'Package': i.pkg||'', '수량': i.qty||'', '최종금액': i.price||'', '납기': i.delivery||'', '공급사': i.supplier||'', '상태': i.status, '결과': i.result||'', '메모': i.memo||'' }));
+  const exportData = filteredList.map(i => ({ '문의일': i.date, '담당자': i.rep, '고객사': i.customer, '엔드유저': i.endUser||'', 'Cat No.': i.partNo||'', '제품명': i.product, 'Spec': i.spec||'', 'CAS No.': i.casNo||'', 'Package': i.pkg||'', '수량': i.qty||'', '최종금액': i.price||'', '납기': i.delivery||'', '공급사': i.supplier||'', '상태': i.status, '결과': i.result||'', '메모': i.memo||'' }));
   const ws = XLSX.utils.json_to_sheet(exportData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '견적내역');
   XLSX.writeFile(wb, '어벤션_견적관리_' + dateStr + '.xlsx');
 }
