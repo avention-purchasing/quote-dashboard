@@ -31,7 +31,10 @@
   }
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  .app { max-width: 1850px; margin: 0 auto; padding: 1.5rem; }
+  
+  /* ✅ 수정된 부분: 대시보드 전체 넓이 1960px로 더 확장 */
+  .app { max-width: 1960px; margin: 0 auto; padding: 1.5rem; }
+  
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
 
   .header { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -113,7 +116,10 @@
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 1rem; }
   .overlay.open { display: flex; }
-  .modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+  
+  /* ✅ 수정된 부분: 팝업창 최대 크기를 500px에서 550px로 넓혀서 입력칸들 시원하게 만듦 */
+  .modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
+  
   .modal-head { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
   .modal-head h2 { font-size: 15px; font-weight: 500; }
   .modal-body { padding: 1.25rem 1.5rem; }
@@ -281,7 +287,7 @@
       
       <div class="table-hint">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        우측의 [이력] 버튼을 클릭하면 상세 내용 및 코멘트를 확인할 수 있습니다. 열 이름(컬럼명)을 누르면 정렬됩니다.
+        우측의 [이력] 버튼을 클릭하면 상세 내용 및 코멘트를 확인할 수 있습니다. 제목을 누르면 정렬됩니다.
       </div>
     </div>
 
@@ -935,11 +941,12 @@ function renderTable() {
 
         let resultHtml = '-';
         if (statusStr === '견적완료') {
-          // ✅ 수정된 부분: 모든 팀원이 서로의 결과를 기입할 수 있도록 권한 제한(isOwner) 해제
           const selStyle = resultStr==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;' : resultStr==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
           resultHtml = `<button class="act-btn" onclick="event.stopPropagation(); openResultModalDirect(${i.id})" style="${selStyle} font-weight:bold;">${esc(resultStr || '결과 입력')}</button>`;
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
+        // ✅ 수정된 부분: 엔드유저(최소 90px~최대 140px), 메모(최소 130px~최대 220px) 여유 공간 확보 및 말줄임표 처리 추가
+        // 제품명(product)도 잘리지 않고 길게 보이도록 수정
         return `<tr class="${isChecked ? 'row-selected' : ''}" 
           onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
           onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')">
@@ -948,7 +955,7 @@ function renderTable() {
           <td style="white-space:nowrap;">${esc(repStr)}</td>
           <td style="font-weight:500;min-width:90px;">${esc(i.customer)}</td>
           <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.partNo)||'-'}</td>
-          <td style="font-size:12px;min-width:110px;">${prodStr.length>15?esc(prodStr).slice(0,15)+'…':esc(prodStr)}</td>
+          <td style="font-size:12px;font-weight:500;min-width:130px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(prodStr)}">${esc(prodStr)}</td>
           <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.spec)||'-'}</td>
           <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.casNo)||'-'}</td>
           <td style="font-size:11px;white-space:nowrap;">${esc(i.pkg)||'-'}</td>
@@ -956,8 +963,8 @@ function renderTable() {
           <td style="font-size:12px;white-space:nowrap;font-weight:500;">${formatPrice(i.price)}</td>
           <td style="font-size:12px;white-space:nowrap;">${esc(i.delivery)||'-'}</td>
           <td style="white-space:nowrap;">${badgeHtml(statusStr)}</td>
-          <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${esc(i.endUser)||'-'}</td>
-          <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);" title="${esc(i.memo)}">${esc(i.memo)||'-'}</td>
+          <td style="font-size:11px;color:var(--text-secondary);min-width:90px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(i.endUser)}">${esc(i.endUser)||'-'}</td>
+          <td style="font-size:11px;min-width:130px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);" title="${esc(i.memo)}">${esc(i.memo)||'-'}</td>
           <td onclick="event.stopPropagation();"><div class="action-group">${actionBtns}</div></td>
           <td onclick="event.stopPropagation();" style="white-space:nowrap; text-align:center;">${resultHtml}</td>
         </tr>`;
