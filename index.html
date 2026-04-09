@@ -32,7 +32,7 @@
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
   
-  /* ✅ 수정된 부분: 늘어난 열을 위해 최대 너비를 1650px에서 1850px로 넓힘 */
+  /* 최대 너비 1850px 유지 */
   .app { max-width: 1850px; margin: 0 auto; padding: 1.5rem; }
   
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
@@ -905,7 +905,6 @@ function renderTable() {
     let list = getFilteredAndSortedInquiries();
     document.getElementById('table-count').textContent = `총 ${list.length}건`;
 
-    // ✅ cols 배열에 endUser 추가
     const cols = ['date','rep','customer','partNo','product','spec','casNo','pkg','qty','price','delivery','status','endUser'];
     cols.forEach(c => { const el = document.getElementById('sort-'+c); if(el) el.textContent = sortCol === c ? (sortDesc ? '▼' : '▲') : ''; });
 
@@ -921,9 +920,12 @@ function renderTable() {
         const prodStr = String(i.product || '');
         
         const isOwner = isMaster || (CONFIG.repEmails[repStr] && CONFIG.repEmails[repStr].toLowerCase() === currentUserEmail);
+        const hasComment = Array.isArray(i.logs) && i.logs.some(l => l && l.type === 'comment');
         const isChecked = selectedIds.has(i.id);
         
-        let actionBtns = `<button class="act-btn" onclick="event.stopPropagation(); openLogModal(${i.id})">이력</button>`;
+        // ✅ 복구된 부분: 말풍선 아이콘은 빼고 주황색 클래스(act-amber)는 다시 추가!
+        let actionBtns = ''; const logStyle = hasComment ? 'act-amber' : '';
+        actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">이력</button>`;
         
         if (isMaster) {
           if (['대기','대기중'].includes(statusStr)) actionBtns += `<button class="act-btn act-blue" onclick="event.stopPropagation(); markAsChecking(${i.id})">진행</button>`;
@@ -939,7 +941,6 @@ function renderTable() {
           } else { resultHtml = resultStr ? badgeHtml(resultStr) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
-        // ✅ 수정된 부분: 메모(memo) 열 바로 앞에 엔드유저(endUser) 열 데이터 추가
         return `<tr class="${isChecked ? 'row-selected' : ''}" 
           onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
           onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')">
@@ -963,10 +964,8 @@ function renderTable() {
         </tr>`;
       } catch(mapErr) {
         console.error("Row Mapping Error:", mapErr);
-        // ✅ 오류 메시지도 17칸으로 늘림
         return `<tr><td colspan="17" style="color:red; text-align:center; font-size:12px;">이 데이터를 렌더링할 수 없습니다. (ID: ${i.id})</td></tr>`;
       }
-      // ✅ 데이터 없음 메시지도 17칸으로 늘림
     }).join('') : '<tr><td colspan="17" class="empty">해당하는 항목 없음</td></tr>';
 
     let pageHtml = '';
@@ -982,7 +981,6 @@ function renderTable() {
     
   } catch(e) {
     console.error("Table Rendering Crash:", e);
-    // ✅ 오류 메시지도 17칸으로 늘림
     document.getElementById('inq-tbody').innerHTML = `<tr><td colspan="17" style="color:red; padding:2rem; text-align:center;">데이터를 불러오는 중 시스템 에러가 발생했습니다.<br><br>오류내용: ${e.message}</td></tr>`;
   }
 }
