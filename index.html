@@ -31,10 +31,7 @@
   }
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  
-  /* 최대 너비 1850px 유지 */
   .app { max-width: 1850px; margin: 0 auto; padding: 1.5rem; }
-  
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
 
   .header { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -240,7 +237,7 @@
           <option value="">전체 수주결과</option>
           <option value="수주">수주</option><option value="미수주">미수주</option>
         </select>
-        <input type="text" id="f-search" placeholder="고객/제품/Spec/메모 검색" onkeyup="applyFilters()" style="border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); height: 32px; width: 170px;">
+        <input type="text" id="f-search" placeholder="고객/제품/엔드유저/메모 검색" onkeyup="applyFilters()" style="border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 6px 10px; font-size: 12px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); height: 32px; width: 180px;">
         
         <input type="date" id="f-start-date" onchange="applyFilters()" style="border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 5px 8px; font-size: 11px; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); height: 32px;">
         <span style="font-size:12px; color:var(--text-secondary);">~</span>
@@ -275,7 +272,7 @@
             <th style="cursor:pointer;" onclick="setSort('delivery')">납기 <span id="sort-delivery"></span></th>
             <th style="cursor:pointer;" onclick="setSort('status')">상태 <span id="sort-status"></span></th>
             <th style="cursor:pointer;" onclick="setSort('endUser')">엔드유저 <span id="sort-endUser"></span></th>
-            <th>메모</th><th>액션</th><th>결과</th>
+            <th>메모</th><th>액션</th><th>수주결과</th>
           </tr></thead>
           <tbody id="inq-tbody"></tbody>
         </table>
@@ -393,7 +390,7 @@
       <div class="info-box" id="result-info"></div>
       <div class="fg" style="margin-top:12px;">
         <label>최종 판매가 (원) <span style="color:var(--text-tertiary); font-weight:normal;">(조정 시 수정하세요)</span></label>
-        <input id="r-price" style="width: 100%;" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitResult)">
+        <input id="r-price" style="width: 100%; box-sizing: border-box;" type="text" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');" onkeydown="checkEnter(event, submitResult)">
       </div>
       <div class="form-grid" style="margin-top:12px; margin-bottom:0;">
         <div class="fg">
@@ -415,7 +412,7 @@
       </div>
       <div class="fg" style="margin-top:12px;">
         <label>메모 (선택)</label>
-        <textarea id="r-memo" style="width: 100%;" placeholder="미수주 사유 등"></textarea>
+        <textarea id="r-memo" style="width: 100%; box-sizing: border-box;" placeholder="미수주 사유 등"></textarea>
       </div>
     </div>
     <div class="modal-foot">
@@ -433,7 +430,7 @@
       <div id="log-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; font-size: 12px; background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-md);"></div>
       <div class="fg form-full">
         <label id="comment-label">영업팀 코멘트 (재견적 요청 등)</label>
-        <textarea id="l-comment" style="width: 100%;" placeholder="메모나 코멘트를 남겨주세요."></textarea>
+        <textarea id="l-comment" style="width: 100%; box-sizing: border-box;" placeholder="메모나 코멘트를 남겨주세요."></textarea>
       </div>
     </div>
     <div class="modal-foot">
@@ -444,7 +441,6 @@
 </div>
 
 <script>
-// ✅ 피드백 연동: 웹앱 주소 정상 연결 (실시간 백업용)
 const CONFIG = {
   repEmails: { 'BML': 'avention@avention.co.kr', 'LSB': 'seungbin@avention.co.kr', 'POL': 'seungbin@avention.co.kr', 'YSJ': 'bio@avention.co.kr' },
   discordBuyer: 'https://discord.com/api/webhooks/1490536970223353947/fzC0wssKrg5FDqkURsh-PUpK7xfJzWNAcDyiFSxsczbQSYCLJGhSewbjeMf0lofc3iLc',
@@ -487,12 +483,11 @@ function formatPrice(p) {
   return '₩' + n.toLocaleString();
 }
 
-// ✅ 실시간 엑셀 백업(동기화) 통신 함수
 function syncToSheets(inqData) {
   if (!CONFIG.sheetsUrl) return;
   fetch(CONFIG.sheetsUrl, {
     method: 'POST',
-    mode: 'no-cors', // 백그라운드 강제 송신
+    mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(inqData)
   }).catch(err => console.error("Sheets Sync Error", err));
@@ -877,7 +872,14 @@ function renderTrend() {
     });
     charts['trend'] = new Chart(document.getElementById('trend-chart'), {
       type:'line', data:{labels:labels,datasets:[{label:'수주율',data,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#1D9E75',spanGaps:true}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+      options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{
+              legend:{display:false},
+              datalabels: { display: false } 
+          },
+          scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}
+      }
     });
   } catch(e) { console.error("Trend Render Error:", e); }
 }
@@ -919,11 +921,9 @@ function renderTable() {
         const resultStr = String(i.result || '');
         const prodStr = String(i.product || '');
         
-        const isOwner = isMaster || (CONFIG.repEmails[repStr] && CONFIG.repEmails[repStr].toLowerCase() === currentUserEmail);
         const hasComment = Array.isArray(i.logs) && i.logs.some(l => l && l.type === 'comment');
         const isChecked = selectedIds.has(i.id);
         
-        // ✅ 복구된 부분: 말풍선 아이콘은 빼고 주황색 클래스(act-amber)는 다시 추가!
         let actionBtns = ''; const logStyle = hasComment ? 'act-amber' : '';
         actionBtns += `<button class="act-btn ${logStyle}" onclick="event.stopPropagation(); openLogModal(${i.id})">이력</button>`;
         
@@ -935,10 +935,9 @@ function renderTable() {
 
         let resultHtml = '-';
         if (statusStr === '견적완료') {
-          if (isOwner) {
-            const selStyle = resultStr==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;' : resultStr==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
-            resultHtml = `<button class="act-btn" onclick="event.stopPropagation(); openResultModalDirect(${i.id})" style="${selStyle} font-weight:bold;">${esc(resultStr || '결과 입력')}</button>`;
-          } else { resultHtml = resultStr ? badgeHtml(resultStr) : `<span style="font-size:11px;color:var(--text-tertiary);">권한없음</span>`; }
+          // ✅ 수정된 부분: 모든 팀원이 서로의 결과를 기입할 수 있도록 권한 제한(isOwner) 해제
+          const selStyle = resultStr==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;' : resultStr==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
+          resultHtml = `<button class="act-btn" onclick="event.stopPropagation(); openResultModalDirect(${i.id})" style="${selStyle} font-weight:bold;">${esc(resultStr || '결과 입력')}</button>`;
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
         return `<tr class="${isChecked ? 'row-selected' : ''}" 
