@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <style>
-  /* 🎨 원본 CSS 디자인 절대 보존 구역 */
+  /* 🎨 원본 CSS 디자인 절대 보존 구역 (수정 금지) */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg-primary: #ffffff; --bg-secondary: #f5f5f3; --bg-tertiary: #eeece6;
@@ -31,10 +31,7 @@
   }
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
-  
-  /* 대시보드 전체 넓이 1960px로 넓힘 */
   .app { max-width: 1960px; margin: 0 auto; padding: 1.5rem; }
-  
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
 
   .header { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -95,6 +92,10 @@
   .act-btn.act-green:hover { background: #d9eecc; }
   .act-btn.act-amber { background: #FFF4E5; color: #854F0B; border-color: #FAC775; font-weight: 600; }
 
+  .result-select-wrap { position: relative; display: inline-block; }
+  .result-select { padding: 4px 20px 4px 8px; border-radius: 6px; font-size: 11px; border: 0.5px solid #C0DD97; background: #EAF3DE; color: #27500A; cursor: pointer; font-family: var(--font); font-weight: 500; appearance: none; -webkit-appearance: none; }
+  .result-select-wrap::after { content: '▾'; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 9px; color: #27500A; pointer-events: none; }
+
   .bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #FAEEDA; border-radius: var(--radius-md); margin-bottom: 10px; border: 0.5px solid #FAC775; }
   .bulk-bar-count { font-size: 13px; color: #633806; font-weight: 500; flex: 1; }
   .bulk-del-btn { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: 0.5px solid #F09595; background: #fff; color: #791F1F; cursor: pointer; font-family: var(--font); }
@@ -112,10 +113,7 @@
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 1rem; }
   .overlay.open { display: flex; }
-  
-  /* 팝업창 최대 너비 550px로 넓힘 */
   .modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
-  
   .modal-head { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
   .modal-head h2 { font-size: 15px; font-weight: 500; }
   .modal-body { padding: 1.25rem 1.5rem; }
@@ -167,6 +165,7 @@
   .info-box { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 9px 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
 
   .chart-wrap { position: relative; width: 100%; }
+
   .table-hint { margin-top: 10px; padding: 9px 12px; background: var(--bg-secondary); border-radius: var(--radius-md); font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
 
   #login-screen { position: fixed; inset: 0; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; z-index: 5000; }
@@ -523,7 +522,6 @@ function openInqModal() {
   setTimeout(() => document.getElementById('i-customer').focus(), 50);
 }
 
-// ✅ 로그인 이메일 체크 보강 (대소문자 무시)
 auth.onAuthStateChanged(user => {
   if (user) {
     const email = user.email.toLowerCase();
@@ -531,8 +529,7 @@ auth.onAuthStateChanged(user => {
       currentUserEmail = email;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('user-info').textContent = `${user.displayName || email} 접속 중`;
-      sendExcelToDiscord(); 
-      startSync();
+      sendExcelToDiscord(); startSync();
     } else {
       alert("회사 계정(@avention.co.kr)만 접속 가능합니다.");
       auth.signOut();
@@ -931,12 +928,10 @@ function renderTable() {
 
         let resultHtml = '-';
         if (statusStr === '견적완료') {
-          // ✅ 영업팀 권한 해제 완료 (isOwner 삭제)
           const selStyle = resultStr==='수주' ? 'background:#EAF3DE;color:#27500A;border-color:#C0DD97;' : resultStr==='미수주' ? 'background:#FCEBEB;color:#791F1F;border-color:#F09595;' : '';
           resultHtml = `<button class="act-btn" onclick="event.stopPropagation(); openResultModalDirect(${i.id})" style="${selStyle} font-weight:bold;">${esc(resultStr || '결과 입력')}</button>`;
         } else if (statusStr === '견적불가') { resultHtml = '-'; }
 
-        // ✅ 넓어진 엔드유저 & 메모 칸 적용
         return `<tr class="${isChecked ? 'row-selected' : ''}" 
           onmouseenter="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='var(--bg-tertiary)')" 
           onmouseleave="if(!this.classList.contains('row-selected')) this.querySelectorAll('td').forEach(td=>td.style.backgroundColor='')">
@@ -1164,20 +1159,15 @@ async function submitQuote() {
 
 function openResultModalDirect(id) {
   resultTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
-  document.getElementById('result-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} · ${esc(i.spec)||''} | 기존 견적가: ₩${i.price?i.price.toLocaleString():'-'}`;
-  
-  // ✅ 버그 픽스: null 이나 undefined 일 때 toLocaleString() 호출해서 나는 에러 완벽 차단
+  document.getElementById('result-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} · ${esc(i.spec)||''} | 기존 견적가: ₩${(i.price !== null && i.price !== undefined) ? i.price.toLocaleString() : '-'}`;
   document.getElementById('r-price').value = (i.price !== null && i.price !== undefined) ? i.price.toLocaleString() : ''; 
-  
   document.getElementById('r-pkg').value = i.pkg || '';
   document.getElementById('r-qty').value = i.qty || '';
   document.getElementById('r-result').value = i.result || ''; 
   document.getElementById('r-memo').value = ''; 
-  
   openModal('result-modal'); setTimeout(() => document.getElementById('r-price').focus(), 50); 
 }
 
-// ✅ 로그인한 계정에 따라 현재 작성자 이름을 깔끔하게 뽑아주는 함수
 function getCurrentUserLabel() {
   if (currentUserEmail === 'ink@avention.co.kr') return '구매팀 (ink)';
   for (const [initials, email] of Object.entries(CONFIG.repEmails)) {
@@ -1190,7 +1180,6 @@ async function submitResult() {
   if (isSubmitting) return; const i = inquiries.find(x=>x.id===resultTarget); if(!i) return;
   const resultVal = document.getElementById('r-result').value; if (!resultVal) { alert('수주 결과를 선택해주세요.'); return; }
   
-  // ✅ 콤마 완벽 제거 및 NaN 방어 로직 추가
   const rawPrice = document.getElementById('r-price').value.replace(/,/g, '');
   const finalPrice = rawPrice === "" ? (i.price || 0) : parseInt(rawPrice);
   if (isNaN(finalPrice)) { alert("금액 형식이 올바르지 않습니다."); return; }
@@ -1207,8 +1196,6 @@ async function submitResult() {
     i.qty = finalQty; 
     
     if(!Array.isArray(i.logs)) i.logs = [];
-    
-    // ✅ 직접 수정하는 사람의 이름을 동적으로 가져오게 변경
     const actorLabel = getCurrentUserLabel();
     
     let logText = resultVal==='수주' ? `🏆 수주 확정 (최종 판매가: ₩${finalPrice.toLocaleString()} / ${finalPkg||'-'} × ${finalQty||'-'})` : `❌ 미수주`;
