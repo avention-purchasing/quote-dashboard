@@ -32,7 +32,7 @@
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
   
-  /* ✅ 모니터 가로 여백 꽉 차게 98%로 설정 (스크롤바 방지) */
+  /* ✅ 모니터 가로 여백 꽉 차게 100% (양옆 1% 여백) 풀사이즈로 확장 */
   .app { max-width: 98%; margin: 0 auto; padding: 1.5rem; }
   
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
@@ -113,7 +113,6 @@
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 1rem; }
   .overlay.open { display: flex; }
   
-  /* ✅ 팝업창 최대 너비 550px 유지 */
   .modal { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
   
   .modal-head { padding: 1.1rem 1.5rem; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
@@ -128,6 +127,13 @@
   .fg label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
   .fg input, .fg select, .fg textarea { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 8px 10px; font-size: 13px; font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); }
   .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--border-hover); }
+  
+  /* 비활성화 스타일 */
+  .fg input:disabled, .fg select:disabled, .fg textarea:disabled { 
+      background: var(--bg-secondary); color: var(--text-tertiary); 
+      cursor: not-allowed; border-color: var(--border); opacity: 1; 
+  }
+  
   .fg textarea { resize: vertical; min-height: 65px; }
 
   .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
@@ -359,7 +365,7 @@
 
 <div class="overlay" id="quote-modal">
   <div class="modal">
-    <div class="modal-head"><h2>견적 입력</h2><button class="x-btn" onclick="closeModal('quote-modal')">×</button></div>
+    <div class="modal-head"><h2>견적 입력 / 수정</h2><button class="x-btn" onclick="closeModal('quote-modal')">×</button></div>
     <div class="modal-body">
       <div class="info-box" id="quote-info"></div>
       <div class="form-grid">
@@ -367,6 +373,7 @@
         <div class="fg"><label>예상 납기</label><input id="q-delivery" style="width: 100%;" type="text" placeholder="예: 2~3주, 1달 등" onkeydown="checkEnter(event, submitQuote)"></div>
         <div class="fg"><label>공급사</label><input id="q-supplier" style="width: 100%;" type="text" placeholder="공급사명" onkeydown="checkEnter(event, submitQuote)"></div>
         <div class="fg"><label>처리 상태</label><select id="q-status" style="width: 100%;"><option value="견적완료">정상 견적</option><option value="견적불가">견적 불가</option></select></div>
+        <div class="fg"><label>영업담당자 수정 (ink 전용)</label><select id="q-rep" style="width: 100%;"><option>BML</option><option>LSB</option><option>POL</option><option>YSJ</option></select></div>
         <div class="fg form-full"><label>메모</label><textarea id="q-memo" style="width: 100%;" placeholder="사유 또는 특이사항"></textarea></div>
       </div>
       <div id="quote-status" class="status-banner">
@@ -376,7 +383,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('quote-modal')">취소</button>
-      <button class="btn btn-primary" onclick="submitQuote()">견적 저장 + 영업팀 알림</button>
+      <button class="btn btn-primary" onclick="submitQuote()">저장 + 영업팀 알림</button>
     </div>
   </div>
 </div>
@@ -515,9 +522,21 @@ function resetFilters() {
   applyFilters();
 }
 
+// ✅ 신규 등록 시: 누구나 담당자 선택 가능하도록 잠금 해제 복구 (회색 비활성화 삭제)
 function openInqModal() {
-  clearInqForm(); openModal('inq-modal');
-  setTimeout(() => document.getElementById('i-customer').focus(), 50);
+  clearInqForm(); 
+  const repSelect = document.getElementById('i-rep');
+  repSelect.disabled = false; // 누구나 수정 가능하도록 잠금 완전 해제
+  
+  // 선택 편의를 위해 로그인한 사람 이니셜을 자동 선택해둠 (클릭해서 변경 가능)
+  let matchedRep = repSelect.options[0].value;
+  for (const [rep, email] of Object.entries(CONFIG.repEmails)) {
+    if (email.toLowerCase() === currentUserEmail) { matchedRep = rep; break; }
+  }
+  repSelect.value = matchedRep;
+  
+  openModal('inq-modal');
+  setTimeout(() => document.getElementById('i-customer').focus(), 50); 
 }
 
 auth.onAuthStateChanged(user => {
@@ -1078,7 +1097,8 @@ function renderAnalytics() {
 async function sendDiscord(webhookUrl, embed) { try { await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ embeds:[embed] }) }); } catch(e) {} }
 
 async function submitInquiry(keepOpen = false) {
-  if (isSubmitting) return; const rep=document.getElementById('i-rep').value, customer=document.getElementById('i-customer').value.trim(), product=document.getElementById('i-product').value.trim();
+  if (isSubmitting) return; 
+  const rep=document.getElementById('i-rep').value, customer=document.getElementById('i-customer').value.trim(), product=document.getElementById('i-product').value.trim();
   if(!customer||!product) { alert('고객사와 제품명은 필수 입력 항목입니다.'); return; }
   isSubmitting = true;
   try {
@@ -1115,7 +1135,9 @@ function openQuoteModal(id) {
   quoteTarget = id; const i = inquiries.find(x=>x.id===id); if(!i) return;
   document.getElementById('quote-info').textContent = `${esc(i.rep)} · ${esc(i.customer)} · ${esc(i.product)} ${i.spec ? '('+esc(i.spec)+')' : ''} · Cat No.: ${esc(i.partNo)||'-'} · CAS: ${esc(i.casNo)||'-'} · ${esc(i.pkg)||''} × ${esc(i.qty)||''}`;
   document.getElementById('q-price').value = i.price ? i.price.toLocaleString() : ''; 
-  document.getElementById('q-delivery').value = i.delivery||''; document.getElementById('q-supplier').value = i.supplier||''; document.getElementById('q-status').value = i.status==='견적불가'?'견적불가':'견적완료'; document.getElementById('q-memo').value = i.memo||''; openModal('quote-modal');
+  document.getElementById('q-delivery').value = i.delivery||''; document.getElementById('q-supplier').value = i.supplier||''; document.getElementById('q-status').value = i.status==='견적불가'?'견적불가':'견적완료'; document.getElementById('q-memo').value = i.memo||''; 
+  document.getElementById('q-rep').value = i.rep || 'BML'; 
+  openModal('quote-modal');
   setTimeout(() => document.getElementById('q-price').focus(), 50); 
 }
 
@@ -1125,13 +1147,19 @@ async function submitQuote() {
   try {
     const rawPrice = document.getElementById('q-price').value.replace(/,/g, '');
     const newPrice=parseInt(rawPrice)||null, newDelivery=document.getElementById('q-delivery').value, newSupplier=document.getElementById('q-supplier').value, newMemo=document.getElementById('q-memo').value, qStatus=document.getElementById('q-status').value;
+    const newRep = document.getElementById('q-rep').value; 
+    
+    i.rep = newRep; 
     i.price=newPrice; i.delivery=newDelivery; i.supplier=newSupplier; i.status=qStatus; i.memo=newMemo; i.quoteDate=new Date().toISOString().slice(0,10);
+    
     if(!Array.isArray(i.logs)) i.logs = []; let logText = qStatus==='견적불가' ? `🚫 견적 불가\n${newMemo?'사유/메모: '+newMemo:''}` : `✅ 견적완료\n💰 금액: ${newPrice?'₩'+newPrice.toLocaleString():'-'}\n🚚 납기: ${newDelivery||'-'}\n🏢 공급사: ${newSupplier||'-'}${newMemo?'\n📝 메모: '+newMemo:''}`;
     i.logs.push({ date:nowStr(), type:'quote', author:'구매팀 (ink)', text:logText });
     let notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [${qStatus}]`;
     if (qStatus === '견적불가' && newMemo) notifText = `구매 → ${i.rep}: ${i.customer} ${i.product} [견적불가: ${newMemo}]`;
     
-    await db.collection("inquiries").doc(String(quoteTarget)).update(i);
+    await db.collection("inquiries").doc(String(quoteTarget)).update({
+      rep: newRep, price: newPrice, delivery: newDelivery, supplier: newSupplier, status: qStatus, memo: newMemo, quoteDate: i.quoteDate, logs: i.logs
+    });
     syncToSheets(i); 
     await db.collection("notifs").add({ id:Date.now(), text:notifText, time:nowStr(), unread:true });
     const sb=document.getElementById('quote-status'); const st=document.getElementById('quote-status-text'); sb.classList.add('show'); st.textContent='디스코드 알림 전송 중...';
