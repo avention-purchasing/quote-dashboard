@@ -32,7 +32,6 @@
 
   body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
   
-  /* ✅ 모니터 가로 여백 꽉 차게 100% (양옆 1% 여백) 풀사이즈로 확장 */
   .app { max-width: 98%; margin: 0 auto; padding: 1.5rem; }
   
   .shell { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
@@ -128,7 +127,6 @@
   .fg input, .fg select, .fg textarea { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 8px 10px; font-size: 13px; font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); }
   .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--border-hover); }
   
-  /* 비활성화 스타일 */
   .fg input:disabled, .fg select:disabled, .fg textarea:disabled { 
       background: var(--bg-secondary); color: var(--text-tertiary); 
       cursor: not-allowed; border-color: var(--border); opacity: 1; 
@@ -522,13 +520,11 @@ function resetFilters() {
   applyFilters();
 }
 
-// ✅ 신규 등록 시: 누구나 담당자 선택 가능하도록 잠금 해제 복구 (회색 비활성화 삭제)
 function openInqModal() {
   clearInqForm(); 
   const repSelect = document.getElementById('i-rep');
   repSelect.disabled = false; // 누구나 수정 가능하도록 잠금 완전 해제
   
-  // 선택 편의를 위해 로그인한 사람 이니셜을 자동 선택해둠 (클릭해서 변경 가능)
   let matchedRep = repSelect.options[0].value;
   for (const [rep, email] of Object.entries(CONFIG.repEmails)) {
     if (email.toLowerCase() === currentUserEmail) { matchedRep = rep; break; }
@@ -585,6 +581,9 @@ function isLastDayOfMonth(date) {
 }
 
 async function sendExcelToDiscord() {
+  // ✅ 추가: 마스터(ink) 계정이 접속할 때만 백업 전송되도록 제한 (중복 전송 완벽 차단)
+  if (currentUserEmail !== 'ink@avention.co.kr') return;
+
   const today = new Date();
   const monthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   const lastSent = localStorage.getItem('lastExcelSentMonth');
@@ -826,7 +825,7 @@ function renderMetrics() {
     document.getElementById('metrics').innerHTML = `
       <div class="metric"><div class="metric-label">전체 견적 문의</div><div class="metric-value">${s.total}건</div><div class="metric-sub">누적</div></div>
       <div class="metric"><div class="metric-label">수주율</div><div class="metric-value green">${s.rate}%</div><div class="metric-sub">수주 ${s.won} / 결정 ${s.decided}건</div></div>
-      <div class="metric" style="cursor:pointer;" onclick="goToPendingInquiries()" title="클릭 시 목록으로 이동">
+      <div class="metric" style="cursor:pointer;" onclick="goToPendingInquiries()" title="클릭 시 목록 이동">
         <div class="metric-label">대기중 (미견적)</div><div class="metric-value amber">${s.pending}건</div><div class="metric-sub">클릭하여 바로가기</div>
       </div>
       <div class="metric"><div class="metric-label">수주 총액</div><div class="metric-value">${(s.totalAmt/1000000).toFixed(1)}M원</div><div class="metric-sub">누적</div></div>
